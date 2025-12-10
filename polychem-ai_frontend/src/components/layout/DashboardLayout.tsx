@@ -68,11 +68,11 @@ function DashboardLayout({ children }: LayoutProps) {
         {/* Header Logo */}
         <div className={`h-16 flex items-center border-b border-gray-200 shrink-0 transition-all duration-300 ${isSidebarOpen ? 'px-6 justify-between' : 'px-0 justify-center'}`}>
             <div className="flex items-center overflow-hidden">
-              <div className="h-10 w-10 rounded-full overflow-hidden border border-gray-200 flex items-center justify-center bg-white flex-shrink-0">
+              <div className="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center bg-white flex-shrink-0">
                   <img src={logoImage} alt="Logo" className="h-full w-full object-cover" />
               </div>
               <span className={`font-bold text-gray-900 text-lg tracking-tight ml-3 transition-opacity duration-300 whitespace-nowrap ${isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0 hidden'}`}>
-                NovaChem
+                PolyChemAI
               </span>
             </div>
              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`text-gray-400 hover:text-gray-600 transition-colors ${!isSidebarOpen ? 'hidden' : 'block'}`}>
@@ -95,9 +95,6 @@ function DashboardLayout({ children }: LayoutProps) {
              
              {/* MODULES: Grid 4 Kotak (Beda) */}
              <MenuItem isOpen={isSidebarOpen} to="/explore" label="Modules" active={isActive('/explore')} icon={<svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>} />
-             
-             {/* LAB TOOLS: Tabung Reaksi (Spesifik) */}
-             <MenuItem isOpen={isSidebarOpen} to="#" label="Lab Tools" icon={<svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>} />
           </div>
 
           <div className="my-4 border-t border-gray-200 mx-4"></div>
@@ -114,9 +111,6 @@ function DashboardLayout({ children }: LayoutProps) {
 
             {/* HISTORY: Jam (Time) */}
             <MenuItem isOpen={isSidebarOpen} to="/history" label="History" active={isActive('/history')} icon={<svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-            
-            {/* SEARCH: Kaca Pembesar (Tetap) */}
-            <MenuItem isOpen={isSidebarOpen} to="#" label="Search" icon={<svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>} />
           </div>
           
           <div className="my-4 border-t border-gray-200 mx-4"></div>

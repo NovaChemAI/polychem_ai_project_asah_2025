@@ -86,8 +86,8 @@ function LoginPage() {
         />
         <div className="absolute inset-0 bg-blue-900/40 backdrop-blur-[2px] flex items-center justify-center">
           <div className="text-center p-10 text-white">
-            <h2 className="text-4xl font-bold mb-4">NovaChemAI</h2>
-            <p className="text-lg text-blue-100">Accelerating Chemical Discovery with Artificial Intelligence.</p>
+            <h2 className="text-4xl font-bold mb-4">PolyChemAI</h2>
+            <p className="text-lg text-blue-100">Mempercepat Penemuan Kimia dengan Kecerdasan Buatan.</p>
           </div>
         </div>
       </div>
@@ -97,7 +97,7 @@ function LoginPage() {
         
         <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
           {/* Logo mengambil dari folder public */}
-          <img className="h-12 w-auto" src="/images/logo.png" alt="NovaChem Logo" />
+          <img className="h-12 w-auto" src="/images/logo.png" alt="PolyChem Logo" />
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             Selamat Datang Kembali
           </h2>

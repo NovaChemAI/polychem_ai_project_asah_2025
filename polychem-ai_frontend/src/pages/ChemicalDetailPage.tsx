@@ -4,7 +4,7 @@ import { chemicalDatabase } from '../services/mockData';
 
 // Import Logic
 import { auth } from '../lib/firebase';
-import { saveToLibrary } from '../services/dbService';
+import { saveToLibrary, removeFromLibrary, checkIsSaved } from '../services/dbService'; // Tambah fungsi baru
 import { onAuthStateChanged } from 'firebase/auth';
 
 function ChemicalDetailPage() {
@@ -12,41 +12,55 @@ function ChemicalDetailPage() {
   const chemical = chemicalDatabase.find(item => item.id === Number(id));
   
   const [userUid, setUserUid] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false); // Status simpan
+  const [loading, setLoading] = useState(false); // Loading tombol
 
-  // 1. Cek Login
+  // 1. Cek Login & Cek Apakah Sudah Disimpan
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserUid(user.uid);
+        if (chemical) {
+          // Cek database apakah item ini sudah ada
+          const saved = await checkIsSaved(user.uid, chemical.id);
+          setIsSaved(saved);
+        }
       } else {
         setUserUid(null);
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [chemical]); 
 
-  // 2. Handle Save
-  const handleSave = async () => {
-    // Validasi: Harus Login
+  // 2. Handle Toggle (Save / Unsave)
+  const handleToggleSave = async () => {
     if (!userUid) {
-      alert("Silakan login terlebih dahulu untuk menyimpan ke Library.");
+      alert("Silakan login terlebih dahulu.");
       return;
     }
     
-    if (chemical) {
-      setIsSaving(true);
-      // Panggil fungsi service yang sudah diperbaiki
-      const success = await saveToLibrary(userUid, chemical);
-      
+    if (!chemical) return;
+
+    setLoading(true);
+
+    if (isSaved) {
+      // --- LOGIKA HAPUS ---
+      const success = await removeFromLibrary(userUid, chemical.id);
       if (success) {
-        setIsSaved(true);
+        setIsSaved(false); // Ubah status jadi belum disimpan
       } else {
-        alert("Gagal menyimpan. Cek koneksi internet.");
+        alert("Gagal menghapus.");
       }
-      setIsSaving(false);
+    } else {
+      // --- LOGIKA SIMPAN ---
+      const success = await saveToLibrary(userUid, chemical);
+      if (success) {
+        setIsSaved(true); // Ubah status jadi tersimpan
+      } else {
+        alert("Gagal menyimpan.");
+      }
     }
+    setLoading(false);
   };
 
   if (!chemical) {
@@ -111,18 +125,30 @@ function ChemicalDetailPage() {
                </div>
 
                <div className="flex gap-3 pt-4">
-                  {/* TOMBOL SAVE */}
-                  <button 
-                    onClick={handleSave}
-                    disabled={isSaved || isSaving}
-                    className={`px-6 py-3 rounded-xl text-sm font-semibold transition-colors border flex items-center gap-2 ${
-                      isSaved 
-                        ? 'bg-green-50 text-green-700 border-green-200 cursor-default' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {isSaving ? 'Saving...' : isSaved ? 'Saved to Library' : 'Save to Project'}
-                  </button>
+                 {/* TOMBOL TOGGLE (SAVE / UNSAVE) */}
+                 <button 
+                   onClick={handleToggleSave}
+                   disabled={loading}
+                   className={`px-6 py-3 rounded-xl text-sm font-semibold transition-colors border flex items-center gap-2 ${
+                     isSaved 
+                       ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' // Tampilan UNSAVE
+                       : 'bg-gray-900 text-white border-transparent hover:bg-gray-800' // Tampilan SAVE
+                   } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                 >
+                   {loading ? 'Processing...' : isSaved ? (
+                     <>
+                       {/* Ikon Sampah */}
+                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                       Remove from Library
+                     </>
+                   ) : (
+                     <>
+                       {/* Ikon Bookmark */}
+                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                       Save to Library
+                     </>
+                   )}
+                 </button>
                </div>
             </div>
           </div>

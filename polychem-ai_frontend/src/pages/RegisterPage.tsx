@@ -104,7 +104,7 @@ function RegisterPage() {
     <div className="min-h-screen flex bg-white">
       {/* KIRI: Ilustrasi */}
       <div className="hidden lg:block lg:w-1/2 relative">
-        {/* ▼ GANTI SRC DENGAN VARIABEL IMPORT ▼ */}
+        {}
         <img 
           src={registerBg} 
           alt="Lab Research" 
