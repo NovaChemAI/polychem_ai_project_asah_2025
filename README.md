@@ -10,7 +10,7 @@ Isu-isu terkait kerusakan bumi yang diakibatkan samaph plastik atau senyawa sint
 ## Proyek
 <img src="https://drive.google.com/uc?export=view&id=1r-mUITBDRARY6tmEYq6Vx1BxkczmHucX" width="850">
 
-Dataset : [Data Polimer]([https://keluhcerdas.vercel.app](https://www.kaggle.com/datasets/linyeping/extra-dataset-with-smilestgpidpolimers-class )
+Dataset : [Data Polimer](https://www.kaggle.com/datasets/linyeping/extra-dataset-with-smilestgpidpolimers-class )
 
 ### Fitur
 - Login page
