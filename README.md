@@ -5,12 +5,15 @@ Use Case    : Novel Chemicals Discovery Agent
 
 ## Latar Belakang
 Industri petrokimia membutuhkan inovasi senyawa baru, tetapi prosesnya terbilang cukup lambat. Industri ini membutuhkan teknologi yang dapat membantu para ahli kimia dalam efisiensi penemuan senyawa baru. Salah satunya yaitu industri yang memproduksi plastik atau senyawa kimia polymer dalam skala besar. 
-Isu-isu terkait kerusakan bumi yang diakibatkan samaph plastik atau senyawa sintetis polimer semakin menguat. Beberapa senyawa polimer pun terindikasi menyebabkan gangguan kesehatan dan berbahaya untuk pemakaian jangka panjang. Oleh karena itu kami membuat proyek ini dengan tujuan agar dapat mempermudah para ahli kimia pada industri produksi plastik dalam menemukan senyawa polimer baru yang dapat diproduksi dengan skala besar, tanpa menyebabkan kerusakan jangka panjang.
+Isu-isu terkait kerusakan bumi yang diakibatkan sampah plastik atau senyawa sintetis polimer semakin menguat. Beberapa senyawa polimer pun terindikasi menyebabkan gangguan kesehatan dan berbahaya untuk pemakaian jangka panjang. Oleh karena itu kami membuat proyek ini dengan tujuan agar dapat mempermudah para ahli kimia pada industri produksi plastik dalam menemukan senyawa polimer baru yang dapat diproduksi dengan skala besar, tanpa menyebabkan kerusakan jangka panjang.
 
 ## Proyek
 <img src="https://drive.google.com/uc?export=view&id=1r-mUITBDRARY6tmEYq6Vx1BxkczmHucX" width="850">
 
 Dataset : [Data Polimer](https://www.kaggle.com/datasets/linyeping/extra-dataset-with-smilestgpidpolimers-class )
+### Arsitektur Sistem
+### Model AI yang digunakan
+### Limitasi Sistem
 
 ### Fitur
 - Login page
@@ -34,6 +37,9 @@ Dataset : [Data Polimer](https://www.kaggle.com/datasets/linyeping/extra-dataset
 - FastAPI
 - Google API
 
+## Instalasi dan Menjalankan Backend Proyek
+1. Clone repository Github
+2. Aktifkan python dan instalasi depedensi
 ## Tim Capstone
 ID Team    : A25-CS110 <br>
 ID Advisor : A25-ML034 <br>
