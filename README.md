@@ -75,7 +75,6 @@ Digunakan untuk:
 - Representasi dan visualisasi struktur kimia
 - Preprocessing data kimia sebelum analisis
 RDKit dijalankan sepenuhnya di backend karena membutuhkan komputasi dan dependensi Python khusus.
-<br>
 
 **3️. Similarity Measurement (Tanimoto Similarity)**<br>
 Berfungsi untuk:
@@ -144,6 +143,7 @@ npm install
 npm run dev
 ```
 ### Back-End
+1. Clone repository Github
 ```
 git clone https://github.com/NovaChemAI/polychem_ai_project_asah_2025.git
 cd polychem_ai_project_asah_2025/polychem-ai_frontend
