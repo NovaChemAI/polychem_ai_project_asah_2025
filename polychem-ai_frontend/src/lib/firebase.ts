@@ -3,7 +3,6 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// INI BAGIAN YANG ANDA SALIN DARI LAYAR FIREBASE TADI 
 const firebaseConfig = {
   apiKey: "AIzaSyDjmkdAmsHWi8CD7R_OE6yhK0E1kpH68RI",
   authDomain: "novachemai.firebaseapp.com",
