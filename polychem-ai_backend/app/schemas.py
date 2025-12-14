@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from typing import List
 
 
 class RecommendRequest(BaseModel):
@@ -9,11 +9,12 @@ class RecommendRequest(BaseModel):
 class NewCompoundOut(BaseModel):
     name: str
     smiles: str
-    formula: str
-    molecular_weight: float
-    tg: float
-    pid: str
-    polymer_class: str
+    formula: str = ""
+    molecular_weight: float = 0.0
+    tg_justification: str = ""  
+    tg: float = 0.0
+    pid: str = ""
+    polymer_class: str = ""
     justifikasi: str
     fingerprint_length: int
     image_filename: str
@@ -23,14 +24,14 @@ class NewCompoundOut(BaseModel):
 class SimilarCompoundOut(BaseModel):
     rank: int
     smiles: str
-    name: str
-    formula: str
-    molecular_weight: float
-    tg: float
-    pid: str
-    polymer_class: str
+    name: str = ""
+    formula: str = ""
+    molecular_weight: float = 0.0
+    tg: float = 0.0
+    pid: str = ""
+    polymer_class: str = ""
     similarity_score: float
-    similarity_percent: float
+    similarity_percent: float = 0.0
     justifikasi: str
     image_filename: str
     image_url: str
@@ -43,7 +44,6 @@ class RecommendResponse(BaseModel):
     similar_compounds: List[SimilarCompoundOut]
 
 
-# ✅ untuk endpoint /history
 class HistoryItemOut(BaseModel):
     input_smiles: str
     result: RecommendResponse

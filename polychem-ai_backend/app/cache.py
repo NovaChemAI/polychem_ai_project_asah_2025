@@ -90,3 +90,7 @@ def get_history() -> List[Dict[str, Any]]:
         cache.set(HISTORY_KEY, hist2, expire=HISTORY_TTL_SECONDS)
 
     return hist2
+
+def key_tg_pred(smiles: str) -> str:
+    smiles_n = _norm(smiles)
+    return f"{CACHE_VERSION}::tg::{smiles_n}"
