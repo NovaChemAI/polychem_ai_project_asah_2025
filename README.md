@@ -2,6 +2,21 @@
 ID Use Case : AC-04
 <br>
 Use Case    : Novel Chemicals Discovery Agent
+<br>
+<details>
+<summary>📑 Daftar Isi</summary>
+
+- [Latar Belakang](#latar-belakang)
+- [Proyek](#proyek)
+- [Arsitektur Sistem](#arsitektur-sistem)
+- [Model AI yang digunakan](#model-ai-yang-digunakan)
+- [Limitasi Sistem](#limitasi-sistem)
+- [Fitur](#fitur)
+- [Teknologi yang digunakan](#teknologi-yang-digunakan)
+- [Instalasi dan Menjalankan Proyek](#instalasi-dan-menjalankan-proyek)
+- [Tim Capstone](#tim-capstone)
+
+</details>
 
 ## Latar Belakang
 Industri petrokimia membutuhkan inovasi senyawa baru, tetapi prosesnya terbilang cukup lambat. Industri ini membutuhkan teknologi yang dapat membantu para ahli kimia dalam efisiensi penemuan senyawa baru. Salah satunya yaitu industri yang memproduksi plastik atau senyawa kimia polymer dalam skala besar. 
