@@ -1,4 +1,3 @@
-store.py
 import os
 import time
 from io import StringIO

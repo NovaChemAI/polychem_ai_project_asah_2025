@@ -1,4 +1,3 @@
-main.py
 from contextlib import asynccontextmanager
 import os
 

@@ -1,4 +1,3 @@
-core.py
 import numpy as np
 from functools import lru_cache
 from typing import List, Tuple

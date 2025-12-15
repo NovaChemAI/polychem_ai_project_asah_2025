@@ -1,4 +1,3 @@
-images.py
 import os
 import hashlib
 from typing import Optional
