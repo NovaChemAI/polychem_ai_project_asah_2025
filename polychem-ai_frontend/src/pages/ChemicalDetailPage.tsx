@@ -4,6 +4,13 @@ import toast from 'react-hot-toast';
 import { saveToLibrary } from '../services/dbService';
 import { auth } from '../lib/firebase';
 
+// =======================================================
+// KONFIGURASI KRITIS: URL BASE KOYEB (Perbaikan)
+// =======================================================
+// Gunakan URL BASE dari hasil justifikasi curl
+const KOYEB_BASE_URL = "https://slim-danika-polychem-ab276767.koyeb.app";
+
+
 // 1. DEFINISI TIPE DATA (Interface)
 interface SimilarCompound {
   name: string;
@@ -82,8 +89,9 @@ function ChemicalDetailPage() {
       <div className="bg-card rounded-2xl shadow-xl border border-border overflow-hidden flex flex-col md:flex-row">
         <div className="md:w-1/3 bg-gray-50 dark:bg-slate-800 p-8 flex items-center justify-center border-r border-border">
           {compound.image_url ? (
+            // PERBAIKAN 1: Gunakan KOYEB_BASE_URL untuk gambar utama
             <img 
-              src={`http://127.0.0.1:8000${compound.image_url}`} 
+              src={`${KOYEB_BASE_URL}${compound.image_url}`} 
               alt="Structure" 
               className="w-full h-auto max-w-[300px] object-contain mix-blend-multiply dark:mix-blend-normal filter dark:invert"
               onError={(e) => {
@@ -121,7 +129,8 @@ function ChemicalDetailPage() {
             </div>
             <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-xl border border-border">
               <p className="text-sm text-muted mb-1">Mol Weight</p>
-              <p className="text-lg font-bold text-main">{compound.molecular_weight} g/mol</p>
+              {/* Tambahkan toFixed(2) agar rapi, berdasarkan output curl */}
+              <p className="text-lg font-bold text-main">{compound.molecular_weight.toFixed(2)} g/mol</p>
             </div>
             <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-xl border border-border col-span-2">
               <div className="flex justify-between items-center mb-1">
@@ -158,9 +167,8 @@ function ChemicalDetailPage() {
 
       <h2 className="text-2xl font-bold text-main mt-12 mb-6">Similar Compounds Found</h2>
       
-      {/* --- BAGIAN SIMILAR COMPOUNDS (DIPERBAIKI) --- */}
+      {/* --- BAGIAN SIMILAR COMPOUNDS --- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 3. TIDAK PERLU 'any' LAGI KARENA SUDAH ADA INTERFACE */}
         {similar.map((item, idx) => (
           <div key={idx} className="bg-card p-5 rounded-xl border border-border hover:shadow-lg transition-all group">
             <div className="flex justify-between items-center mb-4">
@@ -170,7 +178,8 @@ function ChemicalDetailPage() {
             </div>
             
             <div className="h-32 bg-white rounded-lg border border-gray-100 mb-4 p-2 flex items-center justify-center">
-               <img src={`http://127.0.0.1:8000${item.image_url}`} alt={item.name} className="max-h-full max-w-full object-contain" />
+               {/* PERBAIKAN 2: Gunakan KOYEB_BASE_URL untuk gambar serupa */}
+               <img src={`${KOYEB_BASE_URL}${item.image_url}`} alt={item.name} className="max-h-full max-w-full object-contain" />
             </div>
 
             <h3 className="font-bold text-lg text-main mb-1 line-clamp-1" title={item.name}>
@@ -181,7 +190,8 @@ function ChemicalDetailPage() {
             <div className="flex justify-between text-sm border-t border-border pt-3">
               <div>
                 <p className="text-xs text-muted">MW</p>
-                <p className="font-semibold text-main">{item.molecular_weight}</p>
+                {/* Tambahkan toFixed(2) agar rapi, berdasarkan output curl */}
+                <p className="font-semibold text-main">{item.molecular_weight.toFixed(2)}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted">Tg</p>

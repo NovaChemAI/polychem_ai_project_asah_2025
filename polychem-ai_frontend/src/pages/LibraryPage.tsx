@@ -5,7 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { getUserLibrary, removeFromLibrary, type SavedChemical } from '../services/dbService';
 
 // Define your backend URL constant
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = "https://slim-danika-polychem-ab276767.koyeb.app";
 
 function LibraryPage() {
   const [items, setItems] = useState<SavedChemical[]>([]);

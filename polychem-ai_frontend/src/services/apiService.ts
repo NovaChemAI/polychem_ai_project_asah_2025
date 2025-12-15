@@ -1,7 +1,7 @@
 // src/services/apiService.ts
 
-// URL Backend (Port 8000 sesuai terminal Anda)
-const API_BASE_URL = "http://127.0.0.1:8000";
+// URL Backend 
+const API_BASE_URL = "https://slim-danika-polychem-ab276767.koyeb.app";
 
 export interface PredictionResult {
   // Kita definisikan field yang kemungkinan besar ada (opsional)
