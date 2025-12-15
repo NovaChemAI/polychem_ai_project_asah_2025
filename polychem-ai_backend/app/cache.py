@@ -1,59 +1,81 @@
+cache.py
 import os
 import time
+import sqlite3
 from diskcache import Cache
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # =========================
 # CACHE DIR (writable in Koyeb)
 # =========================
+def _ensure_dir(path: str) -> str:
+    os.makedirs(path, exist_ok=True)
+    return path
+
 def _pick_cache_dir() -> str:
     """
-    Defaultnya pakai /tmp karena di Koyeb folder project (/app) bisa read-only.
+    Default pakai /tmp karena di Koyeb folder project (/app) bisa read-only.
     Bisa override lewat env CACHE_DIR.
     """
     env_dir = os.getenv("CACHE_DIR")
     if env_dir:
-        os.makedirs(env_dir, exist_ok=True)
-        return env_dir
+        return _ensure_dir(env_dir)
 
-    tmp_dir = "/tmp/polychem_cache"
-    os.makedirs(tmp_dir, exist_ok=True)
-    return tmp_dir
+    return _ensure_dir("/tmp/polychem_cache")
 
 CACHE_DIR = _pick_cache_dir()
 
 # bump ini kalau prompt/model/dataset berubah besar
-CACHE_VERSION = "v1"
+CACHE_VERSION = os.getenv("CACHE_VERSION", "v1")
 
 # history config
 HISTORY_KEY = f"{CACHE_VERSION}::history"
-HISTORY_LIMIT = 10
-HISTORY_TTL_SECONDS = 60 * 60  # 1 jam
+HISTORY_LIMIT = int(os.getenv("HISTORY_LIMIT", "10"))
+HISTORY_TTL_SECONDS = int(os.getenv("HISTORY_TTL_SECONDS", str(60 * 60)))  # 1 jam
 
-# Cache object global (300mb)
-cache = Cache(CACHE_DIR, size_limit=int(3e8))
+# =========================
+# Cache object global
+# =========================
+def _open_cache(cache_dir: str) -> Cache:
+    """
+    Buka diskcache. Kalau kena readonly sqlite, fallback ke /tmp.
+    """
+    try:
+        return Cache(cache_dir, size_limit=int(3e8))
+    except sqlite3.OperationalError as e:
+        # fallback keras kalau ternyata readonly
+        fallback_dir = _ensure_dir("/tmp/polychem_cache_fallback")
+        print(f"⚠️ diskcache readonly at {cache_dir}. Fallback to {fallback_dir}. Error: {repr(e)}")
+        return Cache(fallback_dir, size_limit=int(3e8))
 
+cache = _open_cache(CACHE_DIR)
+
+# =========================
 # HELPERS
-def _norm(s: str) -> str:
+# =========================
+def _norm(s: Optional[str]) -> str:
     """Normalize biar key stabil (hapus spasi berlebih)."""
-    return " ".join(s.strip().split())
+    return " ".join(str(s or "").strip().split())
 
 def key_new_compound(smiles: str) -> str:
-    """Key untuk cache nama+justifikasi senyawa baru."""
     smiles_n = _norm(smiles)
     return f"{CACHE_VERSION}::new::{smiles_n}"
 
 def key_similar_justif(compound_name: str, top_smiles: List[str]) -> str:
-    """Key untuk cache batch justifikasi similar compounds."""
     cname_n = _norm(compound_name)
-    joined = "|".join(_norm(s) for s in top_smiles)
+    joined = "|".join(_norm(s) for s in (top_smiles or []))
     return f"{CACHE_VERSION}::similar::{cname_n}::{joined}"
 
+def key_tg_pred(smiles: str) -> str:
+    smiles_n = _norm(smiles)
+    return f"{CACHE_VERSION}::tg::{smiles_n}"
+
+# =========================
 # HISTORY (TTL-based)
+# =========================
 def _prune_history(hist: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Buang item yang sudah lewat TTL."""
     now = time.time()
-    fresh = []
+    fresh: List[Dict[str, Any]] = []
     for item in hist:
         ts = item.get("ts")
         if isinstance(ts, (int, float)) and (now - ts) <= HISTORY_TTL_SECONDS:
@@ -62,41 +84,39 @@ def _prune_history(hist: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def push_history(item: Dict[str, Any]) -> None:
     """
-    Simpan history request terbaru:
-    - item diberi timestamp ts
-    - prune berdasarkan TTL
-    - limit HISTORY_LIMIT
-    - key history juga diset expire (TTL)
+    Simpan history request terbaru (aman: cache error tidak bikin API crash).
     """
-    hist = cache.get(HISTORY_KEY, default=[])
-    if not isinstance(hist, list):
-        hist = []
+    try:
+        hist = cache.get(HISTORY_KEY, default=[])
+        if not isinstance(hist, list):
+            hist = []
 
-    hist = _prune_history(hist)
-    item = dict(item)
-    item["ts"] = time.time()
+        hist = _prune_history(hist)
 
-    hist.insert(0, item)
-    hist = hist[:HISTORY_LIMIT]
+        new_item = dict(item)
+        new_item["ts"] = time.time()
 
-    cache.set(HISTORY_KEY, hist, expire=HISTORY_TTL_SECONDS)
+        hist.insert(0, new_item)
+        hist = hist[:HISTORY_LIMIT]
+
+        cache.set(HISTORY_KEY, hist, expire=HISTORY_TTL_SECONDS)
+    except Exception as e:
+        print("⚠️ push_history cache error:", repr(e))
 
 def get_history() -> List[Dict[str, Any]]:
     """
-    Ambil list history:
-    - prune TTL saat dibaca juga
-    - update cache biar item expired beneran kebuang
+    Ambil list history (aman: cache error -> return []).
     """
-    hist = cache.get(HISTORY_KEY, default=[])
-    if not isinstance(hist, list):
+    try:
+        hist = cache.get(HISTORY_KEY, default=[])
+        if not isinstance(hist, list):
+            return []
+
+        hist2 = _prune_history(hist)
+        if len(hist2) != len(hist):
+            cache.set(HISTORY_KEY, hist2, expire=HISTORY_TTL_SECONDS)
+
+        return hist2
+    except Exception as e:
+        print("⚠️ get_history cache error:", repr(e))
         return []
-
-    hist2 = _prune_history(hist)
-    if len(hist2) != len(hist):
-        cache.set(HISTORY_KEY, hist2, expire=HISTORY_TTL_SECONDS)
-
-    return hist2
-
-def key_tg_pred(smiles: str) -> str:
-    smiles_n = _norm(smiles)
-    return f"{CACHE_VERSION}::tg::{smiles_n}"

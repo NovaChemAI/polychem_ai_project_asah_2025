@@ -1,6 +1,6 @@
+main.py
 from contextlib import asynccontextmanager
 import os
-from typing import List
 
 from rdkit import RDLogger
 RDLogger.DisableLog("rdApp.*")
@@ -11,11 +11,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-# Pastikan import ini sesuai dengan struktur folder Anda
 from app.schemas import RecommendRequest, RecommendResponse
 from app.store import load_dataset
 from app.core import recommend_new_compound
-from app.settings import STATIC_DIR
+from app.settings import STATIC_DIR, COMPOUNDS_DIR
 from app.cache import get_history
 
 
@@ -33,43 +32,53 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Setup Static Files
+# =========================================================
+# Static files (Koyeb-safe: /tmp writable)
+# =========================================================
 os.makedirs(STATIC_DIR, exist_ok=True)
+os.makedirs(COMPOUNDS_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# --- PERBAIKAN CORS ---
-# Hapus definisi ganda. Masukkan semua port frontend di sini.
-origins = [
-    "http://localhost:5173",    # Default Vite
-    "http://127.0.0.1:5173",    # Default Vite IP
-    "http://localhost:3000",    # React CRA / Next
+# =========================================================
+# CORS
+# - Untuk produksi: isi FRONTEND_URL di environment (lebih aman)
+# - Kalau belum ada, fallback ke localhost dev
+# =========================================================
+frontend_url = os.getenv("FRONTEND_URL")  # contoh: https://your-frontend.koyeb.app
+
+allow_origins = []
+if frontend_url:
+    allow_origins.append(frontend_url)
+
+# dev origins
+allow_origins += [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
 
+# kalau kamu masih bingung urusan CORS, ini aman dulu:
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],      # Gunakan list spesifik, jangan "*" jika pakai credentials
-    allow_credentials=True,
+    allow_origins=["*"],  # nanti kalau sudah stabil, ganti ke allow_origins=allow_origins
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ----------------------
 
-
-# --- PERBAIKAN ENDPOINT ---
-# 1. Ganti '/recommend' jadi '/predict' agar cocok dengan frontend Anda
-# 2. Hapus 'async' agar server tidak nge-freeze saat AI berpikir
+# =========================================================
+# API Endpoints
+# =========================================================
 @app.post("/predict", response_model=RecommendResponse)
 def predict(req: RecommendRequest):
     try:
-        # Proses AI berat berjalan di sini
         result = recommend_new_compound(req.smiles)
     except Exception as e:
-        print(f"Error di pipeline: {e}") # Print error ke terminal backend
+        print(f"Error di pipeline: {e}")
         raise HTTPException(status_code=503, detail=f"Pipeline error: {str(e)}")
 
     if "error" in result:
-        # Ini akan mengirim pesan error seperti "SMILES tidak valid" ke frontend
         raise HTTPException(status_code=400, detail=result["error"])
 
     return result
@@ -84,38 +93,31 @@ def health():
 def history():
     data = get_history()
 
-    # Backfill logic
+    # Backfill defaults biar history aman walau schema berubah
     for item in data:
         res = item.get("result", {})
 
-        # new_compound defaults
         nc = res.get("new_compound", {})
         nc.setdefault("formula", "")
         nc.setdefault("molecular_weight", 0.0)
         nc.setdefault("tg", 0.0)
+        nc.setdefault("tg_justification", "")
         nc.setdefault("pid", "")
         nc.setdefault("polymer_class", "")
         res["new_compound"] = nc
 
-        # similar_compounds defaults
         scs = res.get("similar_compounds", [])
         for sc in scs:
             sc.setdefault("name", "")
             sc.setdefault("formula", "")
             sc.setdefault("molecular_weight", 0.0)
-            
-            # --- PERBAIKAN LOGIKA DISINI ---
-            # Hapus baris ini: nc.setdefault("tg_justification", "") 
-            # (Karena 'nc' tidak seharusnya diedit di dalam loop 'sc')
-            
             sc.setdefault("tg", 0.0)
             sc.setdefault("pid", "")
             sc.setdefault("polymer_class", "")
-            
-            # Hitung persentase
+
             score = sc.get("similarity_score", 0.0)
-            sc.setdefault("similarity_percent", float(score) * 100)
-            
+            sc.setdefault("similarity_percent", float(score) * 100.0)
+
         res["similar_compounds"] = scs
         item["result"] = res
 

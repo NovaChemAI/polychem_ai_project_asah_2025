@@ -1,10 +1,13 @@
 import os
 
-# BASE_DIR = root project (novachem-ai-backend)
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+# =========================================================
+# Koyeb-safe paths
+# /app  -> READ ONLY
+# /tmp  -> WRITABLE
+# =========================================================
 
-# folder static 
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+# Root static directory (writable)
+STATIC_DIR = os.getenv("STATIC_DIR", "/tmp/static")
 
-# folder simpan gambar compunds
-COMPOUND_DIR = os.path.join(STATIC_DIR, "compounds")
+# Folder simpan gambar compounds
+COMPOUNDS_DIR = os.path.join(STATIC_DIR, "compounds")
