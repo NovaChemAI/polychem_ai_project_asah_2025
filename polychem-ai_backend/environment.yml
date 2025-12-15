@@ -1,0 +1,17 @@
+environment.yml
+name: app
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - rdkit
+  - pip:
+      - fastapi
+      - uvicorn[standard]
+      - requests
+      - pandas
+      - numpy
+      - diskcache
+      - python-dotenv
+      - langchain-google-genai
