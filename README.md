@@ -25,9 +25,9 @@ Isu-isu terkait kerusakan bumi yang diakibatkan sampah plastik atau senyawa sint
 ## Proyek
 <img src="https://drive.google.com/uc?export=view&id=1r-mUITBDRARY6tmEYq6Vx1BxkczmHucX" width="850">
 
-Dataset : [Data Polimer](https://www.kaggle.com/datasets/linyeping/extra-dataset-with-smilestgpidpolimers-class )
-Link Preprocessing Dataset :
-Link Model Agentic AI :  [Modelling](https://colab.research.google.com/drive/1IBfzseIefJsAwU7sggxj1tQFYhid5CPj?usp=sharing)
+Dataset : [Data Polimer](https://www.kaggle.com/datasets/linyeping/extra-dataset-with-smilestgpidpolimers-class ) <br>
+Link Preprocessing Dataset : [clean dataset](https://colab.research.google.com/drive/1xx0RhQ6OmJE_ZOy46y-f4z2wXTRGIZuc#scrollTo=NinH9YSZiFoI) <br>
+Link Model Agentic AI :  [Modelling](https://colab.research.google.com/drive/1IBfzseIefJsAwU7sggxj1tQFYhid5CPj?usp=sharing) <br>
 
 ### Arsitektur Sistem
 Proyek ini menggunakan arsitektur client–server yang memisahkan antara frontend, backend, dan AI service untuk menjaga skalabilitas dan maintainability.
