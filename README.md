@@ -23,9 +23,11 @@ Industri petrokimia membutuhkan inovasi senyawa baru, tetapi prosesnya terbilang
 Isu-isu terkait kerusakan bumi yang diakibatkan sampah plastik atau senyawa sintetis polimer semakin menguat. Beberapa senyawa polimer pun terindikasi menyebabkan gangguan kesehatan dan berbahaya untuk pemakaian jangka panjang. Oleh karena itu kami membuat proyek ini dengan tujuan agar dapat mempermudah para ahli kimia pada industri produksi plastik dalam menemukan senyawa polimer baru yang dapat diproduksi dengan skala besar, tanpa menyebabkan kerusakan jangka panjang.
 
 ## Proyek
-<img src="https://drive.google.com/uc?export=view&id=1r-mUITBDRARY6tmEYq6Vx1BxkczmHucX" width="850">
+<img src="https://drive.google.com/uc?export=view&id=1LKmYSqnHF32he0VMGrZHxw1ArMqiLBeL" width="850">
 
-Dataset : [Data Polimer](https://www.kaggle.com/datasets/linyeping/extra-dataset-with-smilestgpidpolimers-class )
+Dataset : [Data Polimer](https://www.kaggle.com/datasets/linyeping/extra-dataset-with-smilestgpidpolimers-class ) <br>
+Link Preprocessing Dataset : [clean dataset](https://colab.research.google.com/drive/1xx0RhQ6OmJE_ZOy46y-f4z2wXTRGIZuc#scrollTo=NinH9YSZiFoI) <br>
+Link Model Agentic AI :  [Modelling](https://colab.research.google.com/drive/1IBfzseIefJsAwU7sggxj1tQFYhid5CPj?usp=sharing) <br>
 
 ### Arsitektur Sistem
 Proyek ini menggunakan arsitektur client–server yang memisahkan antara frontend, backend, dan AI service untuk menjaga skalabilitas dan maintainability.
