@@ -130,6 +130,8 @@ Pada aspek analisis kimia, penggunaan Tanimoto Similarity bersifat heuristik dan
 - Google Colab
 - FastAPI
 - Google API
+- Vercel
+- Koyeb
 
 ## Instalasi dan Menjalankan Proyek
 ### Front-End
