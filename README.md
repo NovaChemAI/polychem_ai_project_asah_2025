@@ -134,6 +134,8 @@ Pada aspek analisis kimia, penggunaan Tanimoto Similarity bersifat heuristik dan
 - Koyeb
 
 ## Instalasi dan Menjalankan Proyek
+Link Deployment : [Klik Disini](https://polychem-ai-project-asah-2025-flame.vercel.app/)
+
 ### Front-End
 1. Clone repository Github
 ```
