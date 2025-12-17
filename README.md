@@ -52,6 +52,8 @@ Backend dikembangkan menggunakan FastAPI (Python) dan berfungsi sebagai:
 - Penghubung antara frontend dan sistem AI
 - Tempat eksekusi Agentic AI
 
+Backend dan AI service di-deploy menggunakan Koyeb, yang menyediakan lingkungan cloud untuk menjalankan aplikasi Python, pengelolaan environment variable, serta dukungan autoscaling.
+
 ```
 User → Frontend (React + Vite) → Backend (FastAPI) → Agentic AI → Response
           ^                                                           |
