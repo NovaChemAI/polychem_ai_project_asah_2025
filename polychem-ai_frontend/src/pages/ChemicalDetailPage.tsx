@@ -107,10 +107,11 @@ function ChemicalDetailPage() {
             <span className="inline-block px-4 py-1.5 text-[10px] font-black tracking-widest text-blue-700 uppercase bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg mb-3">
               {compound.polymer_class || "Novel Compound"}
             </span>
+            {/* PERBAIKAN NAMA: Sekarang konsisten "Unknown Compound" jika tidak ada nama spesifik */}
             <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white leading-tight">
               {compound.name && compound.name !== "GeneratedCompound" 
                 ? compound.name 
-                : compound.formula || "Unknown Polymer"}
+                : "Unknown Compound"}
             </h1>
           </div>
 
