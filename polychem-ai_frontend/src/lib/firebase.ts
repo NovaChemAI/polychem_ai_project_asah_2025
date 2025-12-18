@@ -1,24 +1,18 @@
-// src/lib/firebase.ts
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDjmkdAmsHWi8CD7R_OE6yhK0E1kpH68RI",
-  authDomain: "novachemai.firebaseapp.com",
-  projectId: "novachemai",
-  storageBucket: "novachemai.firebasestorage.app",
-  messagingSenderId: "423081510336",
-  appId: "1:423081510336:web:7a29e004711b7eb836b425"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
-// Selesai Bagian Config 
 
-// 1. Inisialisasi Aplikasi
 const app = initializeApp(firebaseConfig);
 
-// 2. Siapkan Fitur Login (Auth)
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-
-// 3. Siapkan Database (Firestore)
 export const db = getFirestore(app);
