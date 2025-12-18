@@ -123,16 +123,16 @@ function ChemicalDetailPage() {
           {/* Grid Informasi Utama */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
             <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Formula</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Formula predict</p>
               <p className="text-xl font-bold text-slate-800 dark:text-slate-200">{compound.formula}</p>
             </div>
             <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Mol. Weight</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Mol. Weight predict</p>
               <p className="text-xl font-bold text-slate-800 dark:text-slate-200">{compound.molecular_weight.toFixed(2)} <span className="text-xs font-normal opacity-60">g/mol</span></p>
             </div>
             <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800/50 col-span-1 sm:col-span-2">
               <div className="flex justify-between items-center mb-2">
-                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Glass Transition Temperature (Tg)</p>
+                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Glass Transition Temperature (Tg) predict</p>
                 <span className={`text-[10px] px-2 py-1 rounded-md font-black uppercase ${compound.tg > 50 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
                   {compound.tg > 50 ? "Heat Resistant" : "Highly Flexible"}
                 </span>
@@ -147,7 +147,7 @@ function ChemicalDetailPage() {
           {/* AI Analysis */}
           <div className="mb-10">
             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 bg-blue-500 rounded-full"></span> AI Analysis & Justification
+              <span className="w-2 h-2 bg-blue-500 rounded-full"></span> Justification
             </h3>
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm bg-slate-50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
               {compound.justifikasi}
