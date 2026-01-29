@@ -60,7 +60,7 @@ allow_origins += [
 # kalau kamu masih bingung urusan CORS, ini aman dulu:
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # nanti kalau sudah stabil, ganti ke allow_origins=allow_origins
+    allow_origins=allow_origins,  # nanti kalau sudah stabil, ganti ke allow_origins=allow_origins
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
