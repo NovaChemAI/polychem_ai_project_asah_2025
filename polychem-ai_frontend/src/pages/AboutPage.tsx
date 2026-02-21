@@ -194,7 +194,7 @@ function AboutPage() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-main mb-4">Tim Pengembang</h2>
           <p className="text-muted max-w-2xl mx-auto">
-            Dikembangkan dengan semangat inovasi oleh mahasiswa Universitas Islam Negeri Ar-Raniry sebagai bagian dari Capstone Project.
+            Dikembangkan oleh tim capstone A25-CS110 ASAH By Dicoding 2025
           </p>
         </div>
         
