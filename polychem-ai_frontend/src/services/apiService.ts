@@ -1,40 +1,121 @@
 // src/services/apiService.ts
 
-// URL Backend 
-const API_BASE_URL = "https://slim-danika-polychem-ab276767.koyeb.app";
+const DEFAULT_API_BASE_URL = "https://slim-danika-polychem-ab276767.koyeb.app";
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL
+).replace(/\/+$/, "");
 
-export interface PredictionResult {
-  // Kita definisikan field yang kemungkinan besar ada (opsional)
-  smiles?: string;
-  biodegradability_score?: number;
-
-  // Baris sakti untuk mematikan error 'any' khusus di sini:
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any; 
+interface SimilarCompound {
+  name: string;
+  smiles: string;
+  formula: string;
+  molecular_weight: number;
+  tg: number;
+  image_url: string;
+  similarity_percent: number;
 }
 
-export const predictPolymer = async (query: string): Promise<PredictionResult | null> => {
+interface NewCompound {
+  name: string;
+  smiles: string;
+  formula: string;
+  molecular_weight: number;
+  tg: number;
+  tg_justification: string;
+  polymer_class: string;
+  justifikasi: string;
+  image_url: string;
+}
+
+export interface PredictionResult {
+  status: string;
+  input_smiles: string;
+  new_compound: NewCompound;
+  similar_compounds: SimilarCompound[];
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+};
+
+const toStr = (value: unknown, fallback = ""): string => {
+  return typeof value === "string" ? value : fallback;
+};
+
+const toNum = (value: unknown, fallback = 0): number => {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+export const buildAssetUrl = (path: string): string => {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return `${API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
+export const normalizePrediction = (raw: unknown): PredictionResult | null => {
+  if (!isRecord(raw)) return null;
+
+  const newRaw = isRecord(raw.new_compound) ? raw.new_compound : {};
+  const similarRaw = Array.isArray(raw.similar_compounds)
+    ? raw.similar_compounds
+    : [];
+
+  const normalized: PredictionResult = {
+    status: toStr(raw.status, "success"),
+    input_smiles: toStr(raw.input_smiles, toStr(newRaw.smiles)),
+    new_compound: {
+      name: toStr(newRaw.name, "Unknown Compound"),
+      smiles: toStr(newRaw.smiles),
+      formula: toStr(newRaw.formula, "-"),
+      molecular_weight: toNum(newRaw.molecular_weight, 0),
+      tg: toNum(newRaw.tg, 0),
+      tg_justification: toStr(
+        newRaw.tg_justification,
+        "Tidak ada justifikasi Tg.",
+      ),
+      polymer_class: toStr(newRaw.polymer_class, "Novel Compound"),
+      justifikasi: toStr(newRaw.justifikasi, "Tidak ada justifikasi."),
+      image_url: toStr(newRaw.image_url),
+    },
+    similar_compounds: similarRaw.filter(isRecord).map((item) => ({
+      name: toStr(item.name, "Unknown Compound"),
+      smiles: toStr(item.smiles),
+      formula: toStr(item.formula, "-"),
+      molecular_weight: toNum(item.molecular_weight, 0),
+      tg: toNum(item.tg, 0),
+      image_url: toStr(item.image_url),
+      similarity_percent: toNum(item.similarity_percent, 0),
+    })),
+  };
+
+  if (!normalized.new_compound.smiles) {
+    return null;
+  }
+
+  return normalized;
+};
+
+export const predictPolymer = async (
+  query: string,
+): Promise<PredictionResult | null> => {
   try {
-    // Kita coba nembak ke endpoint /predict
     const response = await fetch(`${API_BASE_URL}/predict`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      // Backend FastAPI biasanya minta body JSON. Kita kirim key 'smiles'.
-      body: JSON.stringify({ smiles: query }), 
+      body: JSON.stringify({ smiles: query }),
     });
 
     if (!response.ok) {
-      // Jika error, kita baca pesan errornya dari backend
       const errorData = await response.json().catch(() => ({}));
       console.error("Backend Error Detail:", errorData);
-      throw new Error(`API Error: ${response.status}`);
+      return null;
     }
 
     const data = await response.json();
-    return data;
-
+    return normalizePrediction(data);
   } catch (error) {
     console.error("Gagal koneksi ke AI:", error);
     return null;

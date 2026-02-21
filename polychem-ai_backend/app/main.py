@@ -53,6 +53,8 @@ if frontend_url:
 allow_origins += [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
@@ -74,8 +76,8 @@ def predict(req: RecommendRequest):
     try:
         result = recommend_new_compound(req.smiles)
     except Exception as e:
-        print(f"Error di pipeline: {e}")
-        raise HTTPException(status_code=503, detail=f"Pipeline error: {str(e)}")
+        print(f"Error di pipeline: {repr(e)}")
+        raise HTTPException(status_code=503, detail="Pipeline unavailable")
 
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])

@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =====================================================
+    // Predictions Collection
+    // =====================================================
+    // Users can only read/write their own predictions
+    match /predictions/{predictionId} {
+      // Read: Only owner can read their predictions
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Create: Only authenticated users, must set correct userId
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.keys().hasAll(['userId', 'smiles', 'timestamp'])
+                    && request.resource.data.smiles is string
+                    && request.resource.data.smiles.size() > 0
+                    && request.resource.data.smiles.size() <= 500;
+      
+      // Update/Delete: Only owner can modify
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // =====================================================
+    // Users Collection (Optional - for user profiles)
+    // =====================================================
+    match /users/{userId} {
+      // Users can only read/write their own profile
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // =====================================================
+    // History Collection (Alternative to predictions)
+    // =====================================================
+    match /history/{historyId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // =====================================================
+    // Library Collection (Saved compounds)
+    // =====================================================
+    match /library/{libraryId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.keys().hasAll(['userId', 'compoundName', 'timestamp']);
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // =====================================================
+    // Deny All Other Access
+    // =====================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

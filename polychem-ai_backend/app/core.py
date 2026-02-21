@@ -223,13 +223,30 @@ def find_similar_compounds(input_fp_rdkit, compound_name: str, top_k: int = 3):
             else:
                 meta["tg"] = _tg_fallback_local(ds_smiles)
 
-        filename = save_smiles_png(ds_smiles, COMPOUNDS_DIR)
+        filename = ""
+        image_url = ""
+        try:
+            filename = save_smiles_png(ds_smiles, COMPOUNDS_DIR)
+            image_url = build_image_url(filename)
+        except Exception:
+            filename = ""
+            image_url = ""
         score = float(similarities[idx])
+
+        # Fallback nama: pakai formula atau polymer_class kalau name kosong
+        display_name = meta["name"]
+        if not display_name or display_name in ["DummyName", "GeneratedCompound"]:
+            if meta["polymer_class"]:
+                display_name = f"{meta['polymer_class']} ({meta['formula']})"
+            elif meta["formula"]:
+                display_name = f"Polymer {meta['formula']}"
+            else:
+                display_name = "Unknown Polymer"
 
         similar_compounds.append({
             "rank": i + 1,
             "smiles": ds_smiles,
-            "name": meta["name"],
+            "name": display_name,
             "formula": meta["formula"],
             "molecular_weight": meta["molecular_weight"],
             "tg": float(meta["tg"]),
@@ -239,7 +256,7 @@ def find_similar_compounds(input_fp_rdkit, compound_name: str, top_k: int = 3):
             "similarity_percent": score * 100.0,
             "justifikasi": justifs[i] if i < len(justifs) else "Mirip secara struktur umum (fallback).",
             "image_filename": filename,
-            "image_url": build_image_url(filename),
+            "image_url": image_url,
         })
 
     return similar_compounds
@@ -280,7 +297,13 @@ def recommend_new_compound(input_smiles: str) -> dict:
             compound_name, justifikasi = _cached_new_compound_llm(smiles_norm)
 
             if compound_name in ["DummyName", "GeneratedCompound", "Unknown", ""]:
-                compound_name = f"Polymer ({meta_input['formula']})"
+                # Fallback: pakai polymer_class atau formula
+                if meta_input["polymer_class"]:
+                    compound_name = f"{meta_input['polymer_class']} ({meta_input['formula']})"
+                elif meta_input["formula"]:
+                    compound_name = f"Polymer {meta_input['formula']}"
+                else:
+                    compound_name = "Novel Polymer"
 
         # Tg input: pakai dataset kalau ada, kalau tidak -> LLM
         if float(meta_input.get("tg", 0.0)) == 0.0:
@@ -290,7 +313,14 @@ def recommend_new_compound(input_smiles: str) -> dict:
         else:
             tg_justification = "Data Tg dari database (exact match)."
 
-    new_filename = save_smiles_png(smiles_norm, COMPOUNDS_DIR)
+    new_filename = ""
+    new_image_url = ""
+    try:
+        new_filename = save_smiles_png(smiles_norm, COMPOUNDS_DIR)
+        new_image_url = build_image_url(new_filename)
+    except Exception:
+        new_filename = ""
+        new_image_url = ""
 
     similar_compounds = find_similar_compounds(
         input_fp_rdkit,
@@ -313,7 +343,7 @@ def recommend_new_compound(input_smiles: str) -> dict:
             "justifikasi": justifikasi,
             "fingerprint_length": len(fp_list) if fp_list else 0,
             "image_filename": new_filename,
-            "image_url": build_image_url(new_filename),
+            "image_url": new_image_url,
         },
         "similar_compounds": similar_compounds,
     }

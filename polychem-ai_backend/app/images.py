@@ -1,15 +1,14 @@
 import os
 import hashlib
-from typing import Optional
+from typing import Any, Optional
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw
-from PIL import Image as PILImage
 
 from app.settings import COMPOUNDS_DIR  # ✅ pakai path writable
 
 
-def smiles_to_image(smiles: str, image_size=(800, 300)) -> Optional[PILImage.Image]:
+def smiles_to_image(smiles: str, image_size=(800, 300)) -> Optional[Any]:
     """SMILES -> PIL Image. Return None kalau invalid."""
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
