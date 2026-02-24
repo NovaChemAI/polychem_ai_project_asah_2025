@@ -48,29 +48,48 @@ frontend_url = os.getenv("FRONTEND_URL")  # contoh: https://your-frontend.koyeb.
 allow_origins = []
 if frontend_url:
     allow_origins.append(frontend_url)
+    print(f"✅ CORS: Added frontend_url from env: {frontend_url}")
+else:
+    print(f"⚠️ WARNING: FRONTEND_URL not set. Using fallback origins.")
 
-# dev origins
-allow_origins += [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# Jika tidak ada origins, allow localhost untuk dev
+if not allow_origins:
+    allow_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost",
+        "http://127.0.0.1",
+        "*",  # fallback untuk debug
+    ]
 
-# kalau kamu masih bingung urusan CORS, ini aman dulu:
+print(f"CORS allow_origins: {allow_origins}")
+
+# Configure CORS properly - MUST be added after app creation but before endpoints
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allow_origins,  # nanti kalau sudah stabil, ganti ke allow_origins=allow_origins
+    allow_origins=allow_origins,
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 # =========================================================
 # API Endpoints
 # =========================================================
+
+# Handle CORS preflight requests explicitly
+@app.options("/{path_name:path}")
+def handle_preflight(path_name: str):
+    """Handle CORS preflight requests"""
+    return {"message": "OK"}
+
+
 @app.post("/predict", response_model=RecommendResponse)
 def predict(req: RecommendRequest):
     try:
