@@ -27,10 +27,10 @@ CACHE_DIR = _pick_cache_dir()
 # bump ini kalau prompt/model/dataset berubah besar
 CACHE_VERSION = os.getenv("CACHE_VERSION", "v1")
 
-# history config - optimized for Nano instance (aggressive)
+# history config - optimized for Nano instance (very aggressive)
 HISTORY_KEY = f"{CACHE_VERSION}::history"
 HISTORY_LIMIT = int(os.getenv("HISTORY_LIMIT", "3"))  # Reduced from 5 to 3
-HISTORY_TTL_SECONDS = int(os.getenv("HISTORY_TTL_SECONDS", str(60 * 15)))  # 15 minutes (from 1 hour)
+HISTORY_TTL_SECONDS = int(os.getenv("HISTORY_TTL_SECONDS", str(60 * 10)))  # 10 minutes (very aggressive)
 
 # =========================
 # Cache object global
