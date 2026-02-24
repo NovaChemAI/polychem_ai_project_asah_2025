@@ -27,9 +27,9 @@ CACHE_DIR = _pick_cache_dir()
 # bump ini kalau prompt/model/dataset berubah besar
 CACHE_VERSION = os.getenv("CACHE_VERSION", "v1")
 
-# history config
+# history config - optimized for Nano instance
 HISTORY_KEY = f"{CACHE_VERSION}::history"
-HISTORY_LIMIT = int(os.getenv("HISTORY_LIMIT", "10"))
+HISTORY_LIMIT = int(os.getenv("HISTORY_LIMIT", "5"))  # Reduced from 10 to 5 for memory
 HISTORY_TTL_SECONDS = int(os.getenv("HISTORY_TTL_SECONDS", str(60 * 60)))  # 1 jam
 
 # =========================
@@ -38,14 +38,28 @@ HISTORY_TTL_SECONDS = int(os.getenv("HISTORY_TTL_SECONDS", str(60 * 60)))  # 1 j
 def _open_cache(cache_dir: str) -> Cache:
     """
     Buka diskcache. Kalau kena readonly sqlite, fallback ke /tmp.
+    
+    SIZE_LIMIT: 50MB (reduced from 300MB for Nano instance memory optimization)
     """
     try:
-        return Cache(cache_dir, size_limit=int(3e8))
+        cache_obj = Cache(cache_dir, size_limit=int(5e7))  # 50MB
+        # Cleanup old entries on startup to free memory
+        try:
+            cache_obj.evict(ratio=0.3)  # Remove 30% oldest entries if at limit
+            print(f"✅ Cache cleanup done. Cache dir: {cache_dir}")
+        except Exception:
+            pass
+        return cache_obj
     except sqlite3.OperationalError as e:
         # fallback keras kalau ternyata readonly
         fallback_dir = _ensure_dir("/tmp/polychem_cache_fallback")
         print(f"⚠️ diskcache readonly at {cache_dir}. Fallback to {fallback_dir}. Error: {repr(e)}")
-        return Cache(fallback_dir, size_limit=int(3e8))
+        cache_obj = Cache(fallback_dir, size_limit=int(5e7))  # 50MB
+        try:
+            cache_obj.evict(ratio=0.3)
+        except Exception:
+            pass
+        return cache_obj
 
 cache = _open_cache(CACHE_DIR)
 

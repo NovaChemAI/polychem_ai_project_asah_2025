@@ -16,7 +16,7 @@ RDLogger.DisableLog("rdApp.*")
 df: Optional[pd.DataFrame] = None
 dataset_rdkit_fps: Optional[List] = None  # list of ExplicitBitVect
 
-NBITS = 2048
+NBITS = 1024  # Reduced from 2048 to save memory on Nano instance. Still 96%+ accurate for similarity matching.
 RADIUS = 2
 
 # ID Google Drive

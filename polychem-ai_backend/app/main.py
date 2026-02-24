@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import os
+import gc
 
 from rdkit import RDLogger
 RDLogger.DisableLog("rdApp.*")
@@ -21,8 +22,12 @@ from app.cache import get_history
 async def lifespan(app: FastAPI):
     print("Loading dataset...")
     load_dataset()
-    print("Dataset loaded!")
+    # Force garbage collection after dataset load to free startup memory
+    gc.collect()
+    print("Dataset loaded! Garbage collection complete.")
     yield
+    # Cleanup on shutdown
+    gc.collect()
 
 
 app = FastAPI(
