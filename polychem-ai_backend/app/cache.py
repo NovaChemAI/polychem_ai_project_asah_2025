@@ -27,10 +27,10 @@ CACHE_DIR = _pick_cache_dir()
 # bump ini kalau prompt/model/dataset berubah besar
 CACHE_VERSION = os.getenv("CACHE_VERSION", "v1")
 
-# history config - optimized for Nano instance
+# history config - optimized for Nano instance (aggressive)
 HISTORY_KEY = f"{CACHE_VERSION}::history"
-HISTORY_LIMIT = int(os.getenv("HISTORY_LIMIT", "5"))  # Reduced from 10 to 5 for memory
-HISTORY_TTL_SECONDS = int(os.getenv("HISTORY_TTL_SECONDS", str(60 * 60)))  # 1 jam
+HISTORY_LIMIT = int(os.getenv("HISTORY_LIMIT", "3"))  # Reduced from 5 to 3
+HISTORY_TTL_SECONDS = int(os.getenv("HISTORY_TTL_SECONDS", str(60 * 15)))  # 15 minutes (from 1 hour)
 
 # =========================
 # Cache object global
@@ -39,14 +39,14 @@ def _open_cache(cache_dir: str) -> Cache:
     """
     Buka diskcache. Kalau kena readonly sqlite, fallback ke /tmp.
     
-    SIZE_LIMIT: 50MB (reduced from 300MB for Nano instance memory optimization)
+    SIZE_LIMIT: 20MB (reduced from 50MB for aggressive memory optimization on Nano)
     """
     try:
-        cache_obj = Cache(cache_dir, size_limit=int(5e7))  # 50MB
-        # Cleanup old entries on startup to free memory
+        cache_obj = Cache(cache_dir, size_limit=int(2e7))  # 20MB
+        # Aggressive cleanup on startup to free memory
         try:
-            cache_obj.evict(ratio=0.3)  # Remove 30% oldest entries if at limit
-            print(f"✅ Cache cleanup done. Cache dir: {cache_dir}")
+            cache_obj.evict(ratio=0.5)  # Remove 50% oldest entries if at limit
+            print(f"✅ Cache cleanup done (aggressive: 50%). Cache dir: {cache_dir}")
         except Exception:
             pass
         return cache_obj
@@ -54,9 +54,9 @@ def _open_cache(cache_dir: str) -> Cache:
         # fallback keras kalau ternyata readonly
         fallback_dir = _ensure_dir("/tmp/polychem_cache_fallback")
         print(f"⚠️ diskcache readonly at {cache_dir}. Fallback to {fallback_dir}. Error: {repr(e)}")
-        cache_obj = Cache(fallback_dir, size_limit=int(5e7))  # 50MB
+        cache_obj = Cache(fallback_dir, size_limit=int(2e7))  # 20MB
         try:
-            cache_obj.evict(ratio=0.3)
+            cache_obj.evict(ratio=0.5)
         except Exception:
             pass
         return cache_obj
