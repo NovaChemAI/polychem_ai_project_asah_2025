@@ -88,7 +88,7 @@ function HomePage() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            onKeyDown={(e) => e.key === "Enter" && !isLoading && handleSearch()}
             placeholder="Cari SMILES (Contoh: C=C)..."
             className="flex-1 px-3 md:px-5 py-3 md:py-4 text-main placeholder-gray-400 text-base md:text-lg bg-transparent outline-none w-full min-w-0"
             disabled={isLoading}
@@ -98,16 +98,72 @@ function HomePage() {
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className={`px-5 py-2.5 md:px-8 md:py-4 rounded-lg md:rounded-xl font-medium md:font-bold transition-all duration-300 shadow-md text-white text-sm md:text-base whitespace-nowrap
+            className={`px-5 py-2.5 md:px-8 md:py-4 rounded-lg md:rounded-xl font-medium md:font-bold transition-all duration-300 shadow-md text-white text-sm md:text-base whitespace-nowrap flex items-center gap-2
               ${
                 isLoading
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 active:scale-95 md:hover:-translate-y-1"
               }`}
           >
-            {isLoading ? "Running..." : "SEARCH"}
+            {isLoading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Processing...</span>
+              </>
+            ) : (
+              "SEARCH"
+            )}
           </button>
         </div>
+
+        {/* LOADING SKELETON */}
+        {isLoading && (
+          <div className="mt-8 w-full animate-pulse">
+            <div className="space-y-6">
+              {/* Skeleton untuk Result Title */}
+              <div className="h-8 bg-border rounded-lg w-48 mx-auto"></div>
+              
+              {/* Skeleton untuk Main Compound Card */}
+              <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Image Skeleton */}
+                  <div className="bg-border rounded-lg h-64 flex items-center justify-center">
+                    <div className="h-48 w-48 bg-border rounded-lg"></div>
+                  </div>
+                  {/* Info Skeleton */}
+                  <div className="space-y-3">
+                    <div className="h-6 bg-border rounded w-3/4"></div>
+                    <div className="h-4 bg-border rounded w-1/2"></div>
+                    <div className="space-y-2 pt-2">
+                      <div className="h-3 bg-border rounded"></div>
+                      <div className="h-3 bg-border rounded w-5/6"></div>
+                      <div className="h-3 bg-border rounded w-4/6"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Skeleton untuk Similar Compounds */}
+              <div className="space-y-4">
+                <div className="h-6 bg-border rounded w-40"></div>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-card border border-border rounded-xl p-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-border rounded w-2/3"></div>
+                        <div className="h-3 bg-border rounded w-1/2"></div>
+                      </div>
+                      <div className="h-12 w-12 bg-border rounded"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
