@@ -9,3 +9,5 @@ langchain
 langchain-google-genai
 python-dotenv
 diskcache==5.6.3
+requests
+Pillow

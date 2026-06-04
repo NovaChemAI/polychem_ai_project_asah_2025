@@ -3,7 +3,7 @@ from typing import List
 
 
 class RecommendRequest(BaseModel):
-    smiles: str = Field(..., min_length=1)
+    smiles: str = Field(..., min_length=1, max_length=500, description="SMILES notation (max 500 characters)")
 
 
 class NewCompoundOut(BaseModel):
