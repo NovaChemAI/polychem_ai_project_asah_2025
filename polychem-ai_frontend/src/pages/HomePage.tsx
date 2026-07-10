@@ -11,7 +11,7 @@ function HomePage() {
   const navigate = useNavigate();
 
   // --- EFEK KETIK (TYPEWRITER) ---
-  const textToType = "Plastic Discovery Agent";
+  const textToType = "Polymer Discovery Agent";
   const [displayedText, setDisplayedText] = useState("");
 
   useEffect(() => {

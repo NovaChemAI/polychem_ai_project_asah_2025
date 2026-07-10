@@ -25,7 +25,7 @@ def _pick_cache_dir() -> str:
 CACHE_DIR = _pick_cache_dir()
 
 # bump ini kalau prompt/model/dataset berubah besar
-CACHE_VERSION = os.getenv("CACHE_VERSION", "v1")
+CACHE_VERSION = os.getenv("CACHE_VERSION", "v2")
 
 # history config - optimized for Nano instance (very aggressive)
 HISTORY_KEY = f"{CACHE_VERSION}::history"

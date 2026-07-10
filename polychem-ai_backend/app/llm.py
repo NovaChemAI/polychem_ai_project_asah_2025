@@ -44,7 +44,7 @@ def _extract_json_obj(text: str) -> Optional[dict]:
     try:
         return json.loads(cand)
     except Exception:
-        # coba ambil blok JSON paling “lebar” kalau ada noise
+        # coba ambil blok JSON paling "lebar" kalau ada noise
         m = re.search(r"\{.*\}", t, flags=re.DOTALL)
         if not m:
             return None
@@ -56,14 +56,14 @@ def _extract_json_obj(text: str) -> Optional[dict]:
 
 def get_llm(
     model_name: str,
-    timeout: int = 25,
-    max_retries: int = 2,
+    timeout: int = 10,
+    max_retries: int = 1,
     temperature: float = 0.3,
 ):
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+
     if not api_key:
-        # fail fast supaya gampang debug di Koyeb
-        raise RuntimeError("GOOGLE_API_KEY belum diset di environment (Koyeb).")
+        raise RuntimeError("GOOGLE_API_KEY/GEMINI_API_KEY belum diset di environment.")
 
     return ChatGoogleGenerativeAI(
         model=model_name,
@@ -77,6 +77,10 @@ def get_llm(
 # =============================================================================
 # LLM SINGLETONS
 # =============================================================================
+# CATATAN OPTIMASI:
+# - timeout & max_retries diturunkan dari (25, 2) / (30, 2) menjadi lebih ketat.
+#   Model "flash" normalnya respons < 5 detik; timeout tinggi cuma bikin
+#   worst-case delay makin parah saat network lambat, bukan mempercepat.
 _llm_fast: Optional[ChatGoogleGenerativeAI] = None
 _llm_tg: Optional[ChatGoogleGenerativeAI] = None
 
@@ -91,8 +95,8 @@ def llm_fast():
         model = os.getenv("GEMINI_MODEL_FAST", "gemini-2.5-flash")
         _llm_fast = get_llm(
             model_name=model,
-            timeout=25,
-            max_retries=2,
+            timeout=10,
+            max_retries=1,
             temperature=0.7,
         )
     return _llm_fast
@@ -108,8 +112,8 @@ def llm_tg():
         model = os.getenv("GEMINI_MODEL_TG", "gemini-2.5-flash")
         _llm_tg = get_llm(
             model_name=model,
-            timeout=30,
-            max_retries=2,
+            timeout=10,
+            max_retries=1,
             temperature=0.1,
         )
     return _llm_tg
@@ -127,15 +131,16 @@ def safe_invoke(prompt: str, fallback: str, max_len: int):
 def safe_invoke_tg(prompt: str, fallback: str, max_len: int):
     """
     Retry ringan biar gak kelamaan.
+    NOTE: max_retries sudah dihandle oleh client (ChatGoogleGenerativeAI),
+    jadi di sini cukup 1x percobaan manual tanpa sleep tambahan yang
+    memperpanjang total waktu tunggu.
     """
-    for attempt in range(2):
-        try:
-            resp = llm_tg().invoke(prompt)
-            return _clean(getattr(resp, "content", ""), max_len=max_len)
-        except Exception as e:
-            print(f"LLM Tg attempt {attempt+1} error:", repr(e))
-            time.sleep(1.2)
-    return fallback
+    try:
+        resp = llm_tg().invoke(prompt)
+        return _clean(getattr(resp, "content", ""), max_len=max_len)
+    except Exception as e:
+        print("LLM Tg error:", repr(e))
+        return fallback
 
 
 # =============================================================================
@@ -185,53 +190,62 @@ def fallback_justification_long(smiles: str, compound_name: str = "") -> str:
 
 
 # =============================================================================
-# NAME + JUSTIFICATION
+# NAME + JUSTIFICATION (DIGABUNG JADI 1 LLM CALL)
 # =============================================================================
-def generate_compound_name(smiles: str) -> str:
+def generate_name_and_justification(smiles: str) -> Tuple[str, str]:
+    """
+    OPTIMASI: sebelumnya ini 2 panggilan LLM terpisah
+    (generate_compound_name + generate_new_justification).
+    Digabung jadi 1 panggilan -> motong 1 network round-trip penuh
+    (biasanya menghemat 1-3 detik per request).
+    """
     smiles = (smiles or "").strip()
     cached = _get_cached(smiles)
-    if cached and cached[0]:
-        return cached[0]
+    if cached and cached[0] and cached[1]:
+        return cached
 
-    prompt = f"""Buat nama senyawa (IUPAC-like jika bisa) untuk SMILES ini: {smiles}
-Aturan:
-- Maksimal 50 karakter
-- Profesional
-- Tanpa penjelasan
-Output: HANYA nama."""
+    prompt = f"""SMILES: {smiles}
 
-    name = safe_invoke(prompt, fallback="GeneratedCompound", max_len=50)
-    _set_cached(smiles, name, cached[1] if cached else "")
+Tugas:
+1. Buat nama senyawa (IUPAC-like jika bisa), maksimal 50 karakter, profesional, tanpa penjelasan.
+2. Tulis justifikasi 3-6 kalimat (Bahasa Indonesia) mengapa struktur ini unik/novel.
+   WAJIB menyebut minimal 2 aspek berikut:
+   - gugus fungsi / polaritas
+   - fleksibilitas rantai (rotatable bonds)
+   - kekakuan (cincin/aromatik)
+   - implikasi terhadap sifat material/polimer (misal Tg, kompatibilitas, stabilitas)
+
+Balas HANYA JSON valid, tanpa markdown/codefence, dengan format persis:
+{{"name": "...", "justification": "..."}}
+"""
+
+    fallback_justif = fallback_justification_long(smiles, "")
+    raw = safe_invoke(prompt, fallback="", max_len=1600)
+    data = _extract_json_obj(raw)
+
+    if isinstance(data, dict) and data.get("name") and data.get("justification"):
+        name = _clean(str(data["name"]), 50)
+        justif = _clean(str(data["justification"]), 1200)
+        if len(justif) < 220:
+            justif = _clean(fallback_justif, 1200)
+    else:
+        name = "GeneratedCompound"
+        justif = fallback_justif
+
+    _set_cached(smiles, name, justif)
+    return name, justif
+
+
+# --- Wrapper backward-compatible (kalau ada bagian lain yang masih memanggil
+#     fungsi lama secara terpisah, ini tetap jalan tapi otomatis pakai cache
+#     dari generate_name_and_justification kalau sudah pernah dipanggil) ---
+def generate_compound_name(smiles: str) -> str:
+    name, _ = generate_name_and_justification(smiles)
     return name
 
 
 def generate_new_justification(smiles: str, compound_name: str) -> str:
-    smiles = (smiles or "").strip()
-    cached = _get_cached(smiles)
-    if cached and cached[1]:
-        return cached[1]
-
-    prompt = f"""SMILES: {smiles}
-Nama: {compound_name}
-
-Tugas:
-Tulis justifikasi 3-6 kalimat (Bahasa Indonesia) mengapa struktur ini unik/novel.
-WAJIB menyebut minimal 2 aspek berikut:
-- gugus fungsi / polaritas
-- fleksibilitas rantai (rotatable bonds)
-- kekakuan (cincin/aromatik)
-- implikasi terhadap sifat material/polimer (misal Tg, kompatibilitas, stabilitas)
-
-Output: HANYA justifikasi (tanpa numbering, tanpa bullet)."""
-
-    fallback = fallback_justification_long(smiles, compound_name)
-    justif = safe_invoke(prompt, fallback=fallback, max_len=1200)
-
-    # quality gate: kalau kependekan, pakai fallback panjang
-    if len(justif) < 220:
-        justif = _clean(fallback, 1200)
-
-    _set_cached(smiles, compound_name, justif)
+    _, justif = generate_name_and_justification(smiles)
     return justif
 
 

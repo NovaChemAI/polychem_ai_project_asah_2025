@@ -1,10 +1,10 @@
+import time
 import numpy as np
 from functools import lru_cache
 from typing import List, Tuple
-
+from concurrent.futures import ThreadPoolExecutor
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors
-
 import app.store as store
 from app.llm import (
     generate_compound_name,
@@ -13,8 +13,6 @@ from app.llm import (
     predict_tg_with_llm,
 )
 
-# OPTIONAL: kalau fungsi ini ada di llm.py, kita pakai.
-# Kalau tidak ada, core.py tetap jalan (fallback internal).
 try:
     from app.llm import tg_fallback_heuristic as _tg_fallback_heuristic
 except Exception:
@@ -23,7 +21,14 @@ except Exception:
 from app.images import save_smiles_png
 from app.cache import cache, key_new_compound, key_similar_justif, push_history
 
-from app.settings import COMPOUNDS_DIR  # ✅ Koyeb-safe (default: /tmp/static/compounds)
+from app.settings import COMPOUNDS_DIR
+
+
+# ============================================================
+# THREAD POOL untuk render gambar (I/O + RDKit drawing bisa
+# jalan paralel karena tiap render tidak saling bergantung)
+# ============================================================
+_image_executor = ThreadPoolExecutor(max_workers=4)
 
 
 # ============================================================
@@ -54,6 +59,18 @@ def build_fingerprints(smiles: str):
     )
     fp_list = list(fp_rdkit)
     return fp_list, fp_rdkit
+
+
+def _render_image_safe(smiles: str) -> Tuple[str, str]:
+    """
+    Wrapper aman untuk render PNG, dipakai di ThreadPoolExecutor.
+    Selalu return (filename, image_url), string kosong kalau gagal.
+    """
+    try:
+        filename = save_smiles_png(smiles, COMPOUNDS_DIR)
+        return filename, build_image_url(filename)
+    except Exception:
+        return "", ""
 
 
 def _tg_fallback_local(smiles: str) -> float:
@@ -88,7 +105,7 @@ def _tg_fallback_local(smiles: str) -> float:
 def _get_metadata_for_smiles(smiles: str) -> dict:
     """
     Ambil metadata dari dataset untuk SMILES tertentu.
-    Kalau tidak ada → fallback aman.
+    Kalau tidak ada -> fallback aman.
     """
     fallback = {
         "name": "",
@@ -152,6 +169,13 @@ def _get_metadata_for_smiles(smiles: str) -> dict:
 
 @lru_cache(maxsize=256)
 def _cached_new_compound_llm(smiles_norm: str):
+    """
+    CATATAN: dengan app/llm.py versi optimized, generate_compound_name()
+    dan generate_new_justification() secara internal sudah memakai
+    generate_name_and_justification() yang digabung jadi 1 call LLM
+    dan saling cache-hit satu sama lain. Jadi pemanggilan berikut ini
+    tetap hanya menghasilkan 1x network call ke Gemini, bukan 2x.
+    """
     dkey = key_new_compound(smiles_norm)
     cached = cache.get(dkey)
     if isinstance(cached, dict) and "name" in cached and "justifikasi" in cached:
@@ -199,6 +223,10 @@ def find_similar_compounds(input_fp_rdkit, compound_name: str, top_k: int = 3):
     if not isinstance(justifs, list):
         justifs = ["Mirip secara struktur umum (fallback)."] * len(top_smiles)
 
+    # OPTIMASI: render semua gambar similar compound secara PARALEL,
+    # bukan satu-satu dalam loop seperti sebelumnya.
+    image_results = list(_image_executor.map(_render_image_safe, top_smiles))
+
     similar_compounds = []
     for i, idx in enumerate(top_indices):
         ds_smiles = top_smiles[i]
@@ -212,7 +240,7 @@ def find_similar_compounds(input_fp_rdkit, compound_name: str, top_k: int = 3):
             if meta["molecular_weight"] <= 0.0:
                 meta["molecular_weight"] = round(float(Descriptors.MolWt(mol_ds)), 2)
 
-        # ✅ pastikan Tg untuk rank 1/2/3 tidak 0
+        # pastikan Tg untuk rank 1/2/3 tidak 0
         if float(meta.get("tg", 0.0)) == 0.0:
             if _tg_fallback_heuristic is not None:
                 try:
@@ -223,14 +251,7 @@ def find_similar_compounds(input_fp_rdkit, compound_name: str, top_k: int = 3):
             else:
                 meta["tg"] = _tg_fallback_local(ds_smiles)
 
-        filename = ""
-        image_url = ""
-        try:
-            filename = save_smiles_png(ds_smiles, COMPOUNDS_DIR)
-            image_url = build_image_url(filename)
-        except Exception:
-            filename = ""
-            image_url = ""
+        filename, image_url = image_results[i]  # hasil render paralel
         score = float(similarities[idx])
 
         # Fallback nama: pakai formula atau polymer_class kalau name kosong
@@ -267,6 +288,7 @@ def find_similar_compounds(input_fp_rdkit, compound_name: str, top_k: int = 3):
 # ============================================================
 
 def recommend_new_compound(input_smiles: str) -> dict:
+    t_start = time.time()
     smiles_norm = normalize_smiles(input_smiles)
 
     fp_list, input_fp_rdkit = build_fingerprints(smiles_norm)
@@ -282,6 +304,11 @@ def recommend_new_compound(input_smiles: str) -> dict:
             meta_input["formula"] = rdMolDescriptors.CalcMolFormula(mol)
         if meta_input["molecular_weight"] <= 0.0:
             meta_input["molecular_weight"] = round(float(Descriptors.MolWt(mol)), 2)
+
+    # OPTIMASI: mulai render gambar compound baru di background thread
+    # SEKARANG JUGA, tidak perlu nunggu proses LLM name/Tg selesai dulu,
+    # karena render gambar tidak butuh compound_name/Tg sama sekali.
+    image_future = _image_executor.submit(_render_image_safe, smiles_norm)
 
     # name + justifikasi
     tg_justification = ""
@@ -313,14 +340,8 @@ def recommend_new_compound(input_smiles: str) -> dict:
         else:
             tg_justification = "Data Tg dari database (exact match)."
 
-    new_filename = ""
-    new_image_url = ""
-    try:
-        new_filename = save_smiles_png(smiles_norm, COMPOUNDS_DIR)
-        new_image_url = build_image_url(new_filename)
-    except Exception:
-        new_filename = ""
-        new_image_url = ""
+    # ambil hasil render gambar compound baru yang sudah jalan di background
+    new_filename, new_image_url = image_future.result()
 
     similar_compounds = find_similar_compounds(
         input_fp_rdkit,
@@ -347,6 +368,8 @@ def recommend_new_compound(input_smiles: str) -> dict:
         },
         "similar_compounds": similar_compounds,
     }
+
+    print(f"[TIMING] recommend_new_compound total: {time.time() - t_start:.2f}s")
 
     push_history({"input_smiles": smiles_norm, "result": result})
     return result

@@ -25,11 +25,8 @@ export interface SavedChemical {
   name: string;
   smiles: string;
   category: string;
-  
-  // PERBAIKAN: Support kedua nama properti
-  image?: string;       // Legacy
-  image_url?: string;   // Sesuai Backend Python
-
+  image?: string;       
+  image_url?: string;   
   properties?: string; 
   score?: string | number;
   isAiResult?: boolean;
@@ -69,9 +66,7 @@ export const saveToLibrary = async (userId: string, data: any): Promise<boolean>
         cleanProperties = JSON.stringify(data.properties || {});
     }
 
-    // --- PERBAIKAN PENTING DI SINI ---
-    // Backend Python mengirim 'image_url'. Kita harus menangkapnya.
-    // Kita simpan ke field 'image_url' di Firestore juga agar konsisten.
+  
     const imageUrlToSave = data.image_url || data.image || "";
 
     const payload: SavedChemical = {
@@ -80,11 +75,8 @@ export const saveToLibrary = async (userId: string, data: any): Promise<boolean>
         name: data.name || "Unknown Compound",
         smiles: data.smiles || "",
         category: data.category || "Uncategorized",
-        
-        // Simpan data gambar
-        image: imageUrlToSave,      // Backward compatibility (opsional)
-        image_url: imageUrlToSave,  // Field utama untuk masa depan
-        
+        image: imageUrlToSave,      
+        image_url: imageUrlToSave,  
         properties: cleanProperties,
         score: data.score || "N/A",
         isAiResult: true,
