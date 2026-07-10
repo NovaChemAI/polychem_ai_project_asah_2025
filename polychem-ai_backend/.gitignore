@@ -80,3 +80,5 @@ Thumbs.db
 # Static files (generated)
 static/compounds/*.png
 !static/compounds/.gitkeep
+
+firebase-service-account.json
