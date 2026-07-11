@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore'; 
-import { auth, googleProvider, db } from '../lib/firebase';
+import { auth, googleProvider } from '../lib/firebase';
+import { syncUserProfile } from '../services/apiService';
 
 // Import Gambar Background
 import loginBg from '../assets/LoginImage.jpg'; 
@@ -26,7 +26,7 @@ function LoginPage() {
       navigate('/');
     } catch (error) {
       console.error(error);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      /// eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err = error as { code: string }; 
       if (err.code === 'auth/invalid-credential') {
         setError('Email atau password salah.');
@@ -43,20 +43,7 @@ function LoginPage() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      const userDocRef = doc(db, "users", user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (!userDocSnap.exists()) {
-        await setDoc(userDocRef, {
-          uid: user.uid,
-          name: user.displayName,
-          email: user.email,
-          role: "user",
-          createdAt: new Date(),
-          searchHistory: [],
-          photoURL: user.photoURL
-        });
-      }
+      await syncUserProfile(user.displayName || undefined, user.photoURL || undefined);
       navigate('/');
     } catch (error) {
       console.error("Google Login Error:", error);

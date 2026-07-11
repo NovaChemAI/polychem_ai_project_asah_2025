@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { getUserHistory, type HistoryItem } from "../services/dbService";
+import { getUserHistoryBackend, type HistoryItemResponse } from "../services/apiService";
 import { normalizePrediction } from "../services/apiService";
 
 function HistoryPage() {
-  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [historyItems, setHistoryItems] = useState<HistoryItemResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -14,7 +14,7 @@ function HistoryPage() {
     // Simulasi delay sedikit agar skeleton terlihat (opsional, bisa dihapus timeout-nya)
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const data = await getUserHistory(user.uid);
+        const data = await getUserHistoryBackend();
         setHistoryItems(data);
       } else {
         navigate("/login");
@@ -24,7 +24,7 @@ function HistoryPage() {
     return () => unsubscribe();
   }, [navigate]);
 
-  const handleItemClick = (item: HistoryItem) => {
+  const handleItemClick = (item: HistoryItemResponse) => {
     try {
       const rawData = JSON.parse(item.full_data);
       const predictionData = normalizePrediction(rawData);

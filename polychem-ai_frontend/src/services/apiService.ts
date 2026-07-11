@@ -1,5 +1,7 @@
 // src/services/apiService.ts
 
+import { auth } from "../lib/firebase";
+
 const DEFAULT_API_BASE_URL =
   "http://localhost:8000";
 export const API_BASE_URL = (
@@ -101,11 +103,19 @@ export const predictPolymer = async (
   query: string,
 ): Promise<PredictionResult | null> => {
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/predict`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ smiles: query }),
     });
 
@@ -120,5 +130,182 @@ export const predictPolymer = async (
   } catch (error) {
     console.error("Gagal koneksi ke AI:", error);
     return null;
+  }
+};
+
+// =========================================================
+// LIBRARY (via Backend FastAPI, bukan langsung ke Firestore)
+// =========================================================
+
+export interface SavedChemicalResponse {
+  id: string;
+  userId: string;
+  name: string;
+  smiles: string;
+  category: string;
+  image?: string;
+  image_url?: string;
+  properties?: string;
+  score?: string | number;
+  isAiResult?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  savedAt?: any;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const saveToLibraryBackend = async (data: any): Promise<boolean> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      console.error("User belum login, tidak ada token.");
+      return false;
+    }
+    const token = await user.getIdToken();
+
+    const response = await fetch(`${API_BASE_URL}/library`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Gagal simpan ke library:", errorData);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Gagal koneksi saat simpan library:", error);
+    return false;
+  }
+};
+
+export const getUserLibraryBackend = async (): Promise <SavedChemicalResponse[]> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return [];
+    const token = await user.getIdToken();
+
+    const response = await fetch(`${API_BASE_URL}/library`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) return [];
+    return await response.json();
+  } catch (error) {
+    console.error("Gagal mengambil library:", error);
+    return [];
+  }
+};
+
+export const removeFromLibraryBackend = async (
+  itemId: string,
+): Promise<boolean> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return false;
+    const token = await user.getIdToken();
+
+    const response = await fetch(`${API_BASE_URL}/library/${itemId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error("Gagal menghapus dari library:", error);
+    return false;
+  }
+};
+
+export interface HistoryItemResponse {
+  id: string;
+  userId: string;
+  query: string;
+  result_name: string;
+  result_smiles: string;
+  full_data: string;
+  timestamp?: {
+    seconds: number;
+    nanoseconds?: number;
+  };
+}
+
+export const getUserHistoryBackend = async (): Promise<HistoryItemResponse[]> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return [];
+    const token = await user.getIdToken();
+
+    const response = await fetch(`${API_BASE_URL}/history/mine`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) return [];
+    return await response.json();
+  } catch (error) {
+    console.error("Gagal mengambil history:", error);
+    return [];
+  }
+};
+
+export const checkIsSavedBackend = async (
+  smiles: string,
+  ): Promise<{ isSaved: boolean; itemId: string }> => {
+  try {
+    const user = auth.currentUser;
+    if (!user || !smiles) return { isSaved: false, itemId: "" };
+    const token = await user.getIdToken();
+
+    const response = await fetch(
+      `${API_BASE_URL}/library/check?smiles=${encodeURIComponent(smiles)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (!response.ok) return { isSaved: false, itemId: "" };
+    return await response.json();
+  } catch (error) {
+    console.error("Gagal cek status saved:", error);
+    return { isSaved: false, itemId: "" };
+  }
+};
+
+
+export const syncUserProfile = async (
+  name?: string,
+  photoUrl?: string,
+): Promise<boolean> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return false;
+    const token = await user.getIdToken();
+
+    const response = await fetch(`${API_BASE_URL}/auth/sync-profile`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ name, photo_url: photoUrl }),
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error("Gagal sinkronisasi profil:", error);
+    return false;
   }
 };

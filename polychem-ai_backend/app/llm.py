@@ -56,8 +56,8 @@ def _extract_json_obj(text: str) -> Optional[dict]:
 
 def get_llm(
     model_name: str,
-    timeout: int = 10,
-    max_retries: int = 1,
+    timeout: int = 45,
+    max_retries: int = 2,
     temperature: float = 0.3,
 ):
     api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -95,8 +95,8 @@ def llm_fast():
         model = os.getenv("GEMINI_MODEL_FAST", "gemini-2.5-flash")
         _llm_fast = get_llm(
             model_name=model,
-            timeout=10,
-            max_retries=1,
+            timeout=45,
+            max_retries=2,
             temperature=0.7,
         )
     return _llm_fast
@@ -112,8 +112,8 @@ def llm_tg():
         model = os.getenv("GEMINI_MODEL_TG", "gemini-2.5-flash")
         _llm_tg = get_llm(
             model_name=model,
-            timeout=10,
-            max_retries=1,
+            timeout=45,
+            max_retries=2,
             temperature=0.1,
         )
     return _llm_tg

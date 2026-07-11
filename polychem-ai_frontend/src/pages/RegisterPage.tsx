@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore'; 
-import { auth, db } from '../lib/firebase'; 
+import { auth } from '../lib/firebase';
+import { syncUserProfile } from '../services/apiService';
 
 // ▼ IMPORT GAMBAR DARI ASSETS ▼
 import registerBg from '../assets/RegisterImage.jpg'; 
@@ -64,21 +64,14 @@ function RegisterPage() {
       });
 
       // C. Simpan ke Database
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        name: name,
-        email: email,
-        role: "user",
-        createdAt: new Date(),
-        searchHistory: [] 
-      });
+      await syncUserProfile(name);
 
       console.log("User registered & saved to DB:", user);
       navigate('/');
       
     } catch (error) {
       console.error(error);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      /// eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err = error as { code: string };
 
       if (err.code === 'auth/email-already-in-use') {

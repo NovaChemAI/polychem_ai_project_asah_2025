@@ -3,14 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
-  getUserLibrary,
-  removeFromLibrary,
-  type SavedChemical,
-} from "../services/dbService";
-import { buildAssetUrl } from "../services/apiService";
+  buildAssetUrl,
+  getUserLibraryBackend,
+  removeFromLibraryBackend,
+  type SavedChemicalResponse,
+} from "../services/apiService";
 
 function LibraryPage() {
-  const [items, setItems] = useState<SavedChemical[]>([]);
+  const [items, setItems] = useState<SavedChemicalResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [userUid, setUserUid] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -21,20 +21,18 @@ function LibraryPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // --- 1. Fetch Data Function ---
-  const fetchItems = async (uid: string) => {
-    // Note: Jika ingin skeleton muncul setiap kali fetch, uncomment baris bawah
-    // setLoading(true);
-    const data = await getUserLibrary(uid);
-    setItems(data);
-    setLoading(false);
-  };
+const fetchItems = async () => {
+  const data = await getUserLibraryBackend();
+  setItems(data);
+  setLoading(false);
+};
 
   // --- 2. Check Login & Load Data ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserUid(user.uid);
-        fetchItems(user.uid);
+        fetchItems();
       } else {
         setItems([]);
         setLoading(false);
@@ -53,16 +51,16 @@ function LibraryPage() {
 
   // --- 4. Confirm Delete Action ---
   const confirmDelete = async () => {
-    if (!userUid || !itemToDelete) return;
+  if (!userUid || !itemToDelete) return;
 
     setIsDeleting(true);
     try {
       setItems((prev) => prev.filter((item) => item.id !== itemToDelete));
-      const success = await removeFromLibrary(userUid, itemToDelete);
+      const success = await removeFromLibraryBackend(itemToDelete);
 
       if (!success) {
         alert("Gagal menghapus data dari server. Data akan dimuat ulang.");
-        fetchItems(userUid);
+        fetchItems();
       }
     } catch (error) {
       console.error(error);

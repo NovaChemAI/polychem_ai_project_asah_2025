@@ -1,14 +1,19 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { saveToLibrary } from "../services/dbService";
+import {
+  saveToLibraryBackend,
+  checkIsSavedBackend,
+  buildAssetUrl,
+  normalizePrediction,
+} from "../services/apiService";
 import { auth } from "../lib/firebase";
-import { buildAssetUrl, normalizePrediction } from "../services/apiService";
 
 function ChemicalDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const predictionData = normalizePrediction(location.state?.predictionData);
 
@@ -17,6 +22,17 @@ function ChemicalDetailPage() {
       navigate("/");
     }
   }, [predictionData, navigate]);
+
+  useEffect(() => {
+    const checkSaved = async () => {
+      if (!predictionData?.new_compound?.smiles) return;
+      const user = auth.currentUser;
+      if (!user) return;
+      const result = await checkIsSavedBackend(predictionData.new_compound.smiles);
+      setIsSaved(result.isSaved);
+    };
+    checkSaved();
+  }, [predictionData]);
 
   if (!predictionData) return null;
 
@@ -37,9 +53,13 @@ function ChemicalDetailPage() {
       category: compound.polymer_class || "Novel Compound",
     };
 
-    const success = await saveToLibrary(user.uid, payload);
-    if (success) toast.success("Berhasil disimpan ke Library!");
-    else toast.error("Gagal menyimpan.");
+    const success = await saveToLibraryBackend(payload);
+    if (success) {
+      toast.success("Berhasil disimpan ke Library!");
+      setIsSaved(true);
+    } else {
+      toast.error("Gagal menyimpan.");
+    }
 
     setIsSaving(false);
   };
@@ -78,7 +98,6 @@ function ChemicalDetailPage() {
             <span className="inline-block px-4 py-1.5 text-[10px] font-black tracking-widest text-blue-700 uppercase bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg mb-3">
               {compound.polymer_class || "Novel Compound"}
             </span>
-            {/* PERBAIKAN NAMA: Sekarang konsisten "Unknown Compound" jika tidak ada nama spesifik */}
             <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white leading-tight">
               {compound.name && compound.name !== "GeneratedCompound"
                 ? compound.name
@@ -146,10 +165,18 @@ function ChemicalDetailPage() {
 
           <button
             onClick={handleSave}
-            disabled={isSaving}
-            className="mt-auto w-full bg-slate-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-500 text-white py-4 rounded-2xl font-black text-lg shadow-xl transform transition hover:-translate-y-1 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSaving || isSaved}
+            className={`mt-auto w-full py-4 rounded-2xl font-black text-lg shadow-xl transform transition hover:-translate-y-1 active:scale-95 disabled:cursor-not-allowed ${
+              isSaved
+                ? "bg-green-600 dark:bg-green-600 text-white opacity-90 disabled:opacity-90"
+                : "bg-slate-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-500 text-white disabled:opacity-50"
+            }`}
           >
-            {isSaving ? "PROCESSING..." : "SAVE TO LIBRARY"}
+            {isSaved
+              ? "SUDAH TERSIMPAN"
+              : isSaving
+                ? "PROCESSING..."
+                : "SAVE TO LIBRARY"}
           </button>
         </div>
       </div>
@@ -169,7 +196,6 @@ function ChemicalDetailPage() {
               key={idx}
               className="bg-white dark:bg-slate-900 flex flex-col p-6 rounded-2xl border border-slate-200 dark:border-slate-800 hover:shadow-2xl hover:border-blue-300 dark:hover:border-blue-800 transition-all duration-300 group"
             >
-              {/* Badge Match */}
               <div className="flex justify-between items-center mb-5">
                 <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider">
                   {item.similarity_percent.toFixed(1)}% Match
@@ -179,7 +205,6 @@ function ChemicalDetailPage() {
                 </span>
               </div>
 
-              {/* Struktur Kimia */}
               <div className="h-44 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 mb-6 p-4 flex items-center justify-center overflow-hidden relative">
                 <img
                   src={buildAssetUrl(item.image_url)}
@@ -192,7 +217,6 @@ function ChemicalDetailPage() {
                 />
               </div>
 
-              {/* Info Senyawa */}
               <div className="mb-5">
                 <h3
                   className="font-black text-lg text-slate-900 dark:text-white mb-1 truncate"
@@ -205,7 +229,6 @@ function ChemicalDetailPage() {
                 </p>
               </div>
 
-              {/* Data Grid */}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
                   <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest mb-1">
@@ -225,7 +248,6 @@ function ChemicalDetailPage() {
                 </div>
               </div>
 
-              {/* Analisis Singkat Otomatis */}
               <div className="mt-auto pt-5 border-t border-dashed border-slate-200 dark:border-slate-800">
                 <div className="flex items-start gap-2">
                   <div

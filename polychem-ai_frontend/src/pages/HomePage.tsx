@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { predictPolymer } from "../services/apiService";
 import toast from "react-hot-toast";
-import { auth } from "../lib/firebase";
-import { addToHistory } from "../services/dbService";
 
 function HomePage() {
   const [query, setQuery] = useState("");
@@ -43,13 +41,7 @@ function HomePage() {
       if (result) {
         toast.success("Prediksi berhasil ditemukan!");
 
-        // 2. Simpan History (jika login)
-        const user = auth.currentUser;
-        if (user) {
-          addToHistory(user.uid, cleanedQuery, result);
-        }
-
-        // 3. Pindah ke halaman Result
+        // Pindah ke halaman Result
         navigate("/result", { state: { predictionData: result } });
       } else {
         toast.error("Input tidak valid / data tidak ditemukan.");
