@@ -19,3 +19,4 @@ dependencies:
       - diskcache==5.6.3
       - requests
       - Pillow
+      - firebase-admin
