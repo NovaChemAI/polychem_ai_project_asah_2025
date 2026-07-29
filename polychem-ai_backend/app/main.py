@@ -15,7 +15,7 @@ from app.store import load_dataset
 from app.core import recommend_new_compound
 from app.settings import STATIC_DIR, COMPOUNDS_DIR
 from app.cache import get_history
-from app.auth_dependency import get_current_user
+from app.auth_dependency import get_current_user, get_current_user_no_verify
 from app.services.library import save_to_library
 from app.services.library import remove_from_library
 from app.auth_dependency import get_optional_user
@@ -24,6 +24,9 @@ from app.services.library import get_user_library
 from app.services.history import get_user_history
 from app.services.users import sync_user_profile
 from app.services.library import check_is_saved_by_smiles
+
+import httpx
+from app.settings import RECAPTCHA_SECRET_KEY
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -76,6 +79,9 @@ class SaveLibraryRequest(BaseModel):
     score: Optional[Union[str, float]] = None
     isAiResult: Optional[bool] = False
 
+class CaptchaRequest(BaseModel):
+    captcha_token: str
+
 # =========================================================
 # API Endpoints
 # =========================================================
@@ -83,42 +89,6 @@ class SaveLibraryRequest(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-# =========================================================
-
-@app.get("/history")
-def history():
-    data = get_history()
-
-    # Backfill defaults biar history aman walau schema berubah
-    for item in data:
-        res = item.get("result", {})
-
-        nc = res.get("new_compound", {})
-        nc.setdefault("formula", "")
-        nc.setdefault("molecular_weight", 0.0)
-        nc.setdefault("tg", 0.0)
-        nc.setdefault("tg_justification", "")
-        nc.setdefault("pid", "")
-        nc.setdefault("polymer_class", "")
-        res["new_compound"] = nc
-
-        scs = res.get("similar_compounds", [])
-        for sc in scs:
-            sc.setdefault("name", "")
-            sc.setdefault("formula", "")
-            sc.setdefault("molecular_weight", 0.0)
-            sc.setdefault("tg", 0.0)
-            sc.setdefault("pid", "")
-            sc.setdefault("polymer_class", "")
-
-            score = sc.get("similarity_score", 0.0)
-            sc.setdefault("similarity_percent", float(score) * 100.0)
-
-        res["similar_compounds"] = scs
-        item["result"] = res
-
-    return JSONResponse(content=jsonable_encoder(data))
 
 # =========================================================
 
@@ -163,6 +133,7 @@ def check_saved_status(smiles: str, user=Depends(get_current_user)):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gagal cek status: {str(e)}")
+    
 # =========================================================
 # NOTE: Hanya ADA SATU definisi /predict di sini.
 # Sebelumnya ada dua @app.post("/predict") yang menyebabkan
@@ -202,12 +173,48 @@ def my_history(user=Depends(get_current_user)):
     
 # =========================================================
 
+@app.get("/history")
+def history():
+    data = get_history()
+
+    # Backfill defaults biar history aman walau schema berubah
+    for item in data:
+        res = item.get("result", {})
+
+        nc = res.get("new_compound", {})
+        nc.setdefault("formula", "")
+        nc.setdefault("molecular_weight", 0.0)
+        nc.setdefault("tg", 0.0)
+        nc.setdefault("tg_justification", "")
+        nc.setdefault("pid", "")
+        nc.setdefault("polymer_class", "")
+        res["new_compound"] = nc
+
+        scs = res.get("similar_compounds", [])
+        for sc in scs:
+            sc.setdefault("name", "")
+            sc.setdefault("formula", "")
+            sc.setdefault("molecular_weight", 0.0)
+            sc.setdefault("tg", 0.0)
+            sc.setdefault("pid", "")
+            sc.setdefault("polymer_class", "")
+
+            score = sc.get("similarity_score", 0.0)
+            sc.setdefault("similarity_percent", float(score) * 100.0)
+
+        res["similar_compounds"] = scs
+        item["result"] = res
+
+    return JSONResponse(content=jsonable_encoder(data))
+    
+# =========================================================
+
 class SyncProfileRequest(BaseModel):
     name: Optional[str] = None
     photo_url: Optional[str] = None
 
 @app.post("/auth/sync-profile")
-def sync_profile(req: SyncProfileRequest, user=Depends(get_current_user)):
+def sync_profile(req: SyncProfileRequest, user=Depends(get_current_user_no_verify)):
     uid = user["uid"]
     email = user.get("email", "")
     name = req.name or user.get("name", "Unknown")
@@ -216,3 +223,22 @@ def sync_profile(req: SyncProfileRequest, user=Depends(get_current_user)):
         return {"success": True, "profile": profile}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gagal sinkronisasi profil: {str(e)}")
+    
+# =========================================================
+
+@app.post("/auth/verify-captcha")
+async def verify_captcha(req: CaptchaRequest):
+    if not RECAPTCHA_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="RECAPTCHA_SECRET_KEY belum dikonfigurasi di server")
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data={"secret": RECAPTCHA_SECRET_KEY, "response": req.captcha_token},
+        )
+        result = resp.json()
+
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail="Verifikasi CAPTCHA gagal")
+
+    return {"success": True}

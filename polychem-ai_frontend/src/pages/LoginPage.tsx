@@ -64,7 +64,7 @@ function LoginPage() {
         />
         <div className="absolute inset-0 bg-blue-900/60 backdrop-blur-[2px] flex items-center justify-center">
           <div className="text-center p-10 text-white">
-            <h2 className="text-4xl font-bold mb-4">PolyChemAI</h2>
+            <h2 className="text-4xl font-bold mb-4">PolyChem</h2>
             <p className="text-lg text-blue-100">Mempercepat Penemuan Kimia dengan Kecerdasan Buatan.</p>
           </div>
         </div>

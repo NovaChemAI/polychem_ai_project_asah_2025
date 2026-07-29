@@ -9,6 +9,7 @@ dependencies:
   - pandas
   - scikit-learn
   - pip:
+      - httpx
       - fastapi
       - uvicorn[standard]
       - pydantic

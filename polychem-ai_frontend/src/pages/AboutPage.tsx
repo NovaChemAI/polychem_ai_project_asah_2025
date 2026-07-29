@@ -105,7 +105,7 @@ function AboutPage() {
       {/* --- HERO HEADER --- */}
       <div className="text-center mb-16 pt-10 px-4">
         <h1 className="text-4xl md:text-5xl font-extrabold text-main mb-6 tracking-tight">
-          Tentang PolyChemAI
+          Tentang PolyChem
         </h1>
         <p className="text-lg text-muted max-w-3xl mx-auto leading-relaxed">
           Platform penemuan material cerdas yang menggabungkan kekuatan Artificial Intelligence dengan ilmu polimer untuk masa depan yang lebih berkelanjutan.
@@ -126,7 +126,7 @@ function AboutPage() {
               Penemuan material polimer baru secara tradisional memakan waktu tahunan dan biaya laboratorium yang sangat besar. Metode <em>trial and error</em> fisik seringkali tidak efisien untuk mengejar kebutuhan material ramah lingkungan yang mendesak.
             </p>
             <p>
-              PolyChemAI hadir untuk memotong komputasi tersebut menggunakan <strong>Machine Learning</strong>. Dengan memprediksi properti kimia langsung dari struktur molekul (SMILES), peneliti dapat menyaring ribuan kandidat material hanya dalam hitungan detik.
+              PolyChem hadir untuk memotong komputasi tersebut menggunakan <strong>Machine Learning</strong>. Dengan memprediksi properti kimia langsung dari struktur molekul (SMILES), peneliti dapat menyaring ribuan kandidat material hanya dalam hitungan detik.
             </p>
           </div>
         </div>

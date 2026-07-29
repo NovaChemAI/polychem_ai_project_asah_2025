@@ -309,3 +309,29 @@ export const syncUserProfile = async (
     return false;
   }
 };
+
+
+// =========================================================
+// CAPTCHA VERIFICATION
+// =========================================================
+
+export const verifyCaptcha = async (captchaToken: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/verify-captcha`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ captcha_token: captchaToken }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Verifikasi captcha gagal:", errorData);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Gagal koneksi saat verifikasi captcha:", error);
+    return false;
+  }
+};

@@ -246,7 +246,7 @@ function DashboardLayout({ children }: LayoutProps) {
             <span
               className={`font-bold text-gray-900 dark:text-white text-lg tracking-tight ml-3 transition-opacity duration-300 whitespace-nowrap ${isSidebarOpen ? "opacity-100" : "opacity-0 w-0 hidden"}`}
             >
-              PolyChemAI
+              PolyChem
             </span>
           </div>
           {isSidebarOpen && (
@@ -378,7 +378,7 @@ function DashboardLayout({ children }: LayoutProps) {
           <nav className="fixed top-0 left-0 bottom-0 w-64 bg-white dark:bg-slate-800 shadow-xl z-50 flex flex-col">
             <div className="h-16 flex items-center px-6 border-b border-gray-100 dark:border-slate-700">
               <span className="font-bold text-blue-600 text-xl">
-                PolyChemAI
+                PolyChem
               </span>
             </div>
             <div className="flex-1 py-4 overflow-y-auto">
@@ -397,7 +397,7 @@ function DashboardLayout({ children }: LayoutProps) {
         <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-20">
           <div className="flex items-center gap-2">
             <img src={logoImage} alt="Logo" className="h-8 w-8" />
-            <span className="font-bold">PolyChemAI</span>
+            <span className="font-bold">PolyChem</span>
           </div>
           <button
             onClick={() => setIsMobileMenuOpen(true)}

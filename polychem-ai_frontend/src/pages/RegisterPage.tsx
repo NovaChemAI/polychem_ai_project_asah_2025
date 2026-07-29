@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { auth } from '../lib/firebase';
-import { syncUserProfile } from '../services/apiService';
+import { syncUserProfile, verifyCaptcha } from '../services/apiService';
+import { useTheme } from '../context/ThemeContext';
 
 // ▼ IMPORT GAMBAR DARI ASSETS ▼
 import registerBg from '../assets/RegisterImage.jpg'; 
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   // State Input
   const [name, setName] = useState('');
@@ -19,6 +22,13 @@ function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isPasswordValid, setIsPasswordValid] = useState(false);
+
+  // State Captcha
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
+
+  // State fokus input password — untuk show/hide tooltip kriteria
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   // State Kriteria Password
   const [passwordCriteria, setPasswordCriteria] = useState({
@@ -44,9 +54,14 @@ function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isPasswordValid) {
       setError("Mohon penuhi semua kriteria password.");
+      return;
+    }
+
+    if (!captchaToken) {
+      setError("Mohon selesaikan verifikasi CAPTCHA.");
       return;
     }
 
@@ -54,49 +69,61 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      // A. Buat Akun
+      // 🔍 DEBUG SEMENTARA — hapus setelah masalah captcha selesai
+      console.log('DEBUG captchaToken:', captchaToken);
+      console.log('DEBUG panjang token:', captchaToken.length);
+
+      // A. Verifikasi captcha ke backend dulu
+      const captchaValid = await verifyCaptcha(captchaToken);
+      if (!captchaValid) {
+        setError('Verifikasi CAPTCHA gagal, silakan coba lagi.');
+        recaptchaRef.current?.reset();
+        setCaptchaToken(null);
+        setLoading(false);
+        return;
+      }
+
+      // B. Buat Akun (Firebase)
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // B. Update Profile
+      // Update Profile
       await updateProfile(user, {
         displayName: name
       });
 
-      // C. Simpan ke Database
+      // C. Kirim email verifikasi
+      await sendEmailVerification(user);
+
+      // D. Simpan ke Database
       await syncUserProfile(name);
 
       console.log("User registered & saved to DB:", user);
-      navigate('/');
-      
+
+      // E. Arahkan ke halaman "cek email", bukan langsung ke home
+      navigate('/verify-email-notice');
+
     } catch (error) {
       console.error(error);
-      /// eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const err = error as { code: string };
+      const err = error as { code?: string };
 
       if (err.code === 'auth/email-already-in-use') {
         setError('Email ini sudah terdaftar. Silakan login.');
       } else {
         setError('Gagal mendaftar. Silakan cek koneksi atau coba lagi.');
       }
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // Komponen Checklist
-  const RequirementItem = ({ met, text }: { met: boolean, text: string }) => (
-    // Update: text colors for dark mode
-    <div className={`flex items-center text-xs mt-1 ${met ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-slate-500'}`}>
-      <span className={`mr-2 flex-shrink-0 w-4 h-4 flex items-center justify-center rounded-full border 
-        ${met 
-          ? 'border-green-600 bg-green-100 dark:border-green-500 dark:bg-green-900/30' 
-          : 'border-gray-300 dark:border-slate-600'
-        }`}>
-        {met && <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
-      </span>
-      {text}
-    </div>
+  // Teks kriteria inline — bold, berubah hijau saat kriteria terpenuhi
+  const RequirementText = ({ met, children }: { met: boolean, children: React.ReactNode }) => (
+    <span className={`font-bold transition-colors duration-200 ${met ? 'text-green-600 dark:text-green-400' : 'text-main'}`}>
+      {children}
+    </span>
   );
 
   return (
@@ -174,36 +201,86 @@ function RegisterPage() {
             
             <div>
               <label className="block text-sm font-medium text-main">Password</label>
-              <input 
-                type="password" 
-                required 
-                // Update: conditional border colors for dark mode
-                className={`mt-1 block w-full px-3 py-3 border rounded-lg shadow-sm sm:text-sm bg-input-bg text-main 
-                  ${isPasswordValid 
-                    ? 'border-green-500 focus:ring-green-500 dark:border-green-400' 
-                    : 'border-border focus:ring-blue-500'}`} 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              
-              {/* Checklist Validasi */}
-              {/* Update: bg-card, border-border */}
-              <div className="mt-3 bg-gray-50 dark:bg-slate-800 p-3 rounded-lg border border-border grid grid-cols-1 sm:grid-cols-2 gap-1">
-                <RequirementItem met={passwordCriteria.length} text="Minimal 8 karakter" />
-                <RequirementItem met={passwordCriteria.upper} text="Huruf Besar (A-Z)" />
-                <RequirementItem met={passwordCriteria.lower} text="Huruf Kecil (a-z)" />
-                <RequirementItem met={passwordCriteria.number} text="Angka (0-9)" />
-                <RequirementItem met={passwordCriteria.special} text="Simbol (!@#_)" />
+              <div className="relative mt-1">
+                <input 
+                  type="password" 
+                  required 
+                  // Update: conditional border colors for dark mode
+                  className={`block w-full px-3 py-3 pr-10 border rounded-lg shadow-sm sm:text-sm bg-input-bg text-main 
+                    ${isPasswordValid 
+                      ? 'border-green-500 focus:ring-green-500 dark:border-green-400' 
+                      : 'border-border focus:ring-blue-500'}`} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setIsPasswordFocused(true)}
+                  onBlur={() => setIsPasswordFocused(false)}
+                />
+                {isPasswordValid && (
+                  <svg
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-600 dark:text-green-400"
+                    fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                )}
+              </div>
+
+              {/* Tooltip Kriteria Password — hanya muncul saat input di-fokus */}
+              <div
+                className={`overflow-hidden transition-all duration-200 ease-out ${
+                  isPasswordFocused ? 'max-h-40 opacity-100 pt-4' : 'max-h-0 opacity-0 pt-0'
+                }`}
+              >
+                <div className="relative">
+                  {/* Anak panah menunjuk ke input */}
+                  <div className="absolute -top-[7px] left-6 w-3 h-3 bg-gray-50 dark:bg-slate-800/60 border-l border-t border-border rotate-45" />
+                  <div className="p-3.5 rounded-lg border border-border bg-gray-50 dark:bg-slate-800/60 text-sm leading-relaxed text-main">
+                    Password harus minimal <RequirementText met={passwordCriteria.length}>8 karakter</RequirementText> dan mengandung{' '}
+                    <RequirementText met={passwordCriteria.number}>1 angka</RequirementText>,{' '}
+                    <RequirementText met={passwordCriteria.upper}>1 huruf besar</RequirementText>,{' '}
+                    <RequirementText met={passwordCriteria.lower}>1 huruf kecil</RequirementText>, dan{' '}
+                    <RequirementText met={passwordCriteria.special}>1 simbol</RequirementText>.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Widget CAPTCHA */}
+            <div className="rounded-xl border border-border bg-gray-50 dark:bg-slate-800/60 overflow-hidden">
+              <div className="flex items-center justify-between px-4 pt-3.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
+                  Verifikasi Keamanan
+                </span>
+                {captchaToken && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-600 dark:text-green-400">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    Terverifikasi
+                  </span>
+                )}
+              </div>
+              <div className="flex justify-center p-3.5 pt-2.5">
+                <div className="rounded-lg overflow-hidden shadow-sm">
+                  <ReCAPTCHA
+                    key={theme}
+                    ref={recaptchaRef}
+                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                    theme={theme}
+                    onChange={(token) => setCaptchaToken(token)}
+                    onExpired={() => setCaptchaToken(null)}
+                  />
+                </div>
               </div>
             </div>
             
             <div className="pt-2">
                 <button 
                   type="submit" 
-                  disabled={loading || !isPasswordValid} 
+                  disabled={loading || !isPasswordValid || !captchaToken} 
                   // Update: Button colors (Slate/Blue)
                   className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white transition-colors
-                    ${loading || !isPasswordValid 
+                    ${loading || !isPasswordValid || !captchaToken
                       ? 'bg-gray-400 dark:bg-slate-700 cursor-not-allowed' 
                       : 'bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700'}`}
                 >

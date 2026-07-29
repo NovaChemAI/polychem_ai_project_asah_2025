@@ -58,7 +58,7 @@ def get_llm(
     model_name: str,
     timeout: int = 45,
     max_retries: int = 2,
-    temperature: float = 0.3,
+    temperature: float = 0.0,
 ):
     api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
@@ -81,13 +81,20 @@ def get_llm(
 # - timeout & max_retries diturunkan dari (25, 2) / (30, 2) menjadi lebih ketat.
 #   Model "flash" normalnya respons < 5 detik; timeout tinggi cuma bikin
 #   worst-case delay makin parah saat network lambat, bukan mempercepat.
+#
+# CATATAN KONSISTENSI:
+# - temperature diturunkan ke 0.0 untuk KEDUA model (nama/justifikasi & Tg).
+#   Tujuannya supaya SMILES yang sama menghasilkan output yang (seharusnya)
+#   sama/serupa setiap kali dipanggil ulang, bukan berubah-ubah tiap request.
+#   Catatan: temperature=0 tidak 100% menjamin determinisme mutlak di semua
+#   provider LLM, tapi jauh mengurangi variasi dibanding temperature tinggi.
 _llm_fast: Optional[ChatGoogleGenerativeAI] = None
 _llm_tg: Optional[ChatGoogleGenerativeAI] = None
 
 
 def llm_fast():
     """
-    Untuk nama + justifikasi umum (boleh kreatif).
+    Untuk nama + justifikasi umum.
     Model bisa dioverride via ENV: GEMINI_MODEL_FAST
     """
     global _llm_fast
@@ -97,14 +104,14 @@ def llm_fast():
             model_name=model,
             timeout=45,
             max_retries=2,
-            temperature=0.7,
+            temperature=0.0,
         )
     return _llm_fast
 
 
 def llm_tg():
     """
-    Khusus Tg: lebih deterministik.
+    Khusus Tg: deterministik.
     Model bisa dioverride via ENV: GEMINI_MODEL_TG
     """
     global _llm_tg
@@ -114,7 +121,7 @@ def llm_tg():
             model_name=model,
             timeout=45,
             max_retries=2,
-            temperature=0.1,
+            temperature=0.0,
         )
     return _llm_tg
 
@@ -144,17 +151,47 @@ def safe_invoke_tg(prompt: str, fallback: str, max_len: int):
 
 
 # =============================================================================
-# SIMPLE IN-MEMORY CACHE (nama + justifikasi)
+# CACHE (nama + justifikasi) — sekarang pakai diskcache PERSISTEN
 # =============================================================================
-_llm_cache: Dict[str, Tuple[str, str]] = {}
+# CATATAN PERUBAHAN:
+# - Sebelumnya pakai dict Python biasa (_llm_cache = {}) yang hidup di RAM
+#   dan HILANG setiap kali proses server restart (termasuk auto-reload
+#   uvicorn --reload). Sekarang diarahkan ke diskcache yang sama dengan
+#   yang dipakai app/cache.py, supaya hasil generate persisten dan
+#   konsisten antar restart, dengan TTL supaya tidak nyangkut selamanya.
+NAME_JUSTIF_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 hari
+
+
+def _name_justif_key(smiles: str) -> str:
+    try:
+        from app.cache import CACHE_VERSION
+    except Exception:
+        CACHE_VERSION = "v2"
+    smiles_n = " ".join((smiles or "").strip().split())
+    return f"{CACHE_VERSION}::name_justif::{smiles_n}"
 
 
 def _get_cached(smiles: str) -> Optional[Tuple[str, str]]:
-    return _llm_cache.get(smiles)
+    try:
+        from app.cache import cache
+        data = cache.get(_name_justif_key(smiles))
+        if isinstance(data, (list, tuple)) and len(data) == 2 and data[0] and data[1]:
+            return (str(data[0]), str(data[1]))
+    except Exception as e:
+        print("⚠️ _get_cached error:", repr(e))
+    return None
 
 
 def _set_cached(smiles: str, name: str, justification: str):
-    _llm_cache[smiles] = (name, justification)
+    try:
+        from app.cache import cache
+        cache.set(
+            _name_justif_key(smiles),
+            (name, justification),
+            expire=NAME_JUSTIF_TTL_SECONDS,
+        )
+    except Exception as e:
+        print("⚠️ _set_cached error:", repr(e))
 
 
 # =============================================================================
@@ -198,10 +235,15 @@ def generate_name_and_justification(smiles: str) -> Tuple[str, str]:
     (generate_compound_name + generate_new_justification).
     Digabung jadi 1 panggilan -> motong 1 network round-trip penuh
     (biasanya menghemat 1-3 detik per request).
+
+    KONSISTENSI: hasil di-cache secara persisten (diskcache) per SMILES,
+    jadi SMILES yang sama tidak akan generate ulang setiap request
+    (dan tidak akan berubah-ubah hasilnya setiap kali dipanggil).
     """
     smiles = (smiles or "").strip()
+
     cached = _get_cached(smiles)
-    if cached and cached[0] and cached[1]:
+    if cached:
         return cached
 
     prompt = f"""SMILES: {smiles}

@@ -27,7 +27,7 @@ function WikiPage() {
               <h2 className="text-xl font-bold text-main mb-3">Cara Memulai Pencarian</h2>
               {/* Update: text-muted */}
               <p className="text-muted mb-6 leading-relaxed">
-                Saat ini, PolyChem AI secara spesifik dirancang untuk menganalisis struktur kimia menggunakan format standar industri. Untuk mendapatkan hasil prediksi yang akurat, mohon gunakan format input berikut:
+                Saat ini, PolyChem secara spesifik dirancang untuk menganalisis struktur kimia menggunakan format standar industri. Untuk mendapatkan hasil prediksi yang akurat, mohon gunakan format input berikut:
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
