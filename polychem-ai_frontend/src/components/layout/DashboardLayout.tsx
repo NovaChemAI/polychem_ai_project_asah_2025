@@ -68,7 +68,7 @@ const NavLinks = ({
       onItemClick={onItemClick}
       isOpen={isOpen}
       to="/wiki"
-      label="Wiki's"
+      label="Guide's"
       active={isActive("/wiki")}
       icon={
         <svg
