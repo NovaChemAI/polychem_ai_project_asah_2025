@@ -25,6 +25,17 @@ function HomePage() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // --- CONTOH SMILES CEPAT ---
+  const exampleSmiles = [
+    { label: "Methyl Methacrylate", value: "C=C(C)C(=O)OC" },
+    { label: "Styrene", value: "C=Cc1ccccc1" },
+    { label: "Trimethyl Triester (Novel)", value: "CC(C)(C(=O)OC)CC(C)(C(=O)OC)CC(C)(C(=O)OC)" },
+  ];
+
+  const handleExampleClick = (value: string) => {
+    setQuery(value);
+  };
+
   // --- FUNGSI SEARCH ---
   const handleSearch = async () => {
     const cleanedQuery = query.trim();
@@ -126,6 +137,50 @@ function HomePage() {
             )}
           </button>
         </div>
+
+        {/* CONTOH SMILES CEPAT */}
+        {!isLoading && (
+          <div className="flex flex-wrap justify-center items-center gap-3 mt-6">
+            <span className="text-sm text-muted mr-1">Coba:</span>
+            {exampleSmiles.map((example) => (
+              <button
+                key={example.value}
+                onClick={() => handleExampleClick(example.value)}
+                className="text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 px-4 py-2 rounded-full border border-blue-100 dark:border-blue-900 transition-colors"
+              >
+                {example.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* CARA KERJA — 3 LANGKAH */}
+        {!isLoading && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-10 mt-16 md:mt-20">
+            <div className="flex flex-col items-center text-center gap-3 px-4">
+              <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base">1</div>
+              <p className="text-base font-semibold text-main">Masukkan SMILES</p>
+              <p className="text-sm text-muted leading-relaxed">Tulis struktur molekul polimer atau monomer dalam notasi SMILES.</p>
+            </div>
+            <div className="flex flex-col items-center text-center gap-3 px-4">
+              <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base">2</div>
+              <p className="text-base font-semibold text-main">AI Menganalisis</p>
+              <p className="text-sm text-muted leading-relaxed">Struktur dianalisis dan dibandingkan dengan senyawa serupa di database.</p>
+            </div>
+            <div className="flex flex-col items-center text-center gap-3 px-4">
+              <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base">3</div>
+              <p className="text-base font-semibold text-main">Lihat Prediksi</p>
+              <p className="text-sm text-muted leading-relaxed">Dapatkan prediksi properti kimia beserta penjelasan (justification) dari AI.</p>
+            </div>
+          </div>
+        )}
+
+        {/* DISCLAIMER */}
+        {!isLoading && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 italic text-center mt-14 max-w-2xl mx-auto leading-relaxed">
+            Hasil prediksi dihasilkan oleh model AI dan bersifat estimasi. Disarankan untuk memverifikasi hasil secara eksperimental sebelum digunakan untuk pengambilan keputusan.
+          </p>
+        )}
 
         {/* LOADING SKELETON */}
         {isLoading && (
