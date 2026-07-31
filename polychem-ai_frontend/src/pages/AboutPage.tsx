@@ -29,9 +29,9 @@ function AboutPage() {
   const technologies = [
     { name: "React + Vite", role: "Frontend Modern", image: reactLogo },
     { name: "Firebase", role: "Auth & Database", image: firebaseLogo },
-    { name: "Python AI", role: "Machine Learning", image: pythonLogo },
+    { name: "Python + RDKit", role: "Validasi & Fitur Kimia", image: pythonLogo },
     { name: "Tailwind CSS", role: "Styling System", image: tailwindLogo },
-    { name: "Google Colab", role: "Model Training", image: colabLogo },
+    { name: "Google Colab", role: "Eksperimen & Riset", image: colabLogo },
     { name: "VS Code", role: "Code Editor", image: vscodeLogo },
   ];
 
@@ -108,7 +108,8 @@ function AboutPage() {
           Tentang PolyChem
         </h1>
         <p className="text-lg text-muted max-w-3xl mx-auto leading-relaxed">
-          Platform penemuan material cerdas yang menggabungkan kekuatan Artificial Intelligence dengan ilmu polimer untuk masa depan yang lebih berkelanjutan.
+          Aplikasi web untuk memprediksi properti termal polimer — Glass Transition Temperature (Tg) —
+          dari struktur molekul SMILES, dengan arsitektur Agentic AI yang menggabungkan validasi kimia dan penalaran model bahasa.
         </p>
       </div>
 
@@ -123,15 +124,15 @@ function AboutPage() {
           <h2 className="text-2xl font-bold text-main mb-6">Mengapa Riset Ini Penting?</h2>
           <div className="prose dark:prose-invert text-muted leading-relaxed space-y-4 text-justify">
             <p>
-              Penemuan material polimer baru secara tradisional memakan waktu tahunan dan biaya laboratorium yang sangat besar. Metode <em>trial and error</em> fisik seringkali tidak efisien untuk mengejar kebutuhan material ramah lingkungan yang mendesak.
+              Penemuan material polimer baru secara tradisional (wet lab) memakan waktu lama, biaya tinggi, dan melibatkan proses <em>trial and error</em> yang tidak efisien. Sebagian besar alat prediksi kimia berbasis AI saat ini juga masih berjalan pada antarmuka baris perintah yang sulit diakses peneliti non-programer.
             </p>
             <p>
-              PolyChem hadir untuk memotong komputasi tersebut menggunakan <strong>Machine Learning</strong>. Dengan memprediksi properti kimia langsung dari struktur molekul (SMILES), peneliti dapat menyaring ribuan kandidat material hanya dalam hitungan detik.
+              PolyChem hadir sebagai aplikasi web berarsitektur <strong>Client-Server</strong> yang mengorkestrasi <strong>Agentic AI</strong>: RDKit memvalidasi struktur SMILES dan mengekstraksi fitur kimia, lalu model bahasa (LLM) melakukan penalaran berbasis fitur tersebut untuk memperkirakan nilai Tg — parameter penting yang menentukan fleksibilitas dan stabilitas termal material polimer.
             </p>
           </div>
         </div>
 
-        {/* KOLOM KANAN: Tujuan Project (Icon Cards) */}
+        {/* KOLOM KANAN: Yang Membedakan PolyChem (Icon Cards) */}
         <div className="grid grid-cols-1 gap-4 h-full">
           {/* Card 1 */}
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow flex items-start gap-4">
@@ -139,30 +140,30 @@ function AboutPage() {
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </div>
             <div>
-              <h3 className="font-bold text-main mb-1">Integrasi AI Modern</h3>
-              <p className="text-sm text-muted">Menggabungkan model Python canggih dengan antarmuka web yang responsif dan cepat.</p>
+              <h3 className="font-bold text-main mb-1">Agentic AI Pipeline</h3>
+              <p className="text-sm text-muted">RDKit memvalidasi struktur SMILES dan mengekstraksi fitur kimia (Morgan Fingerprint), lalu LLM menalar di atas fitur tersebut untuk meminimalkan halusinasi hasil prediksi.</p>
             </div>
           </div>
 
           {/* Card 2 */}
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow flex items-start gap-4">
             <div className="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 flex-shrink-0">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
             </div>
             <div>
-              <h3 className="font-bold text-main mb-1">User Interface Intuitif</h3>
-              <p className="text-sm text-muted">Desain yang ramah pengguna, memudahkan kimiawan tanpa latar belakang coding.</p>
+              <h3 className="font-bold text-main mb-1">Analisis Kemiripan Molekul</h3>
+              <p className="text-sm text-muted">Tanimoto Similarity membandingkan fingerprint senyawa input dengan dataset yang tersedia, menampilkan senyawa serupa sebagai konteks tambahan atas hasil prediksi.</p>
             </div>
           </div>
 
           {/* Card 3 */}
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow flex items-start gap-4">
             <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 flex-shrink-0">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
             </div>
             <div>
-              <h3 className="font-bold text-main mb-1">Kolaborasi Riset</h3>
-              <p className="text-sm text-muted">Fitur Library untuk menyimpan dan berbagi riwayat analisis antar peneliti.</p>
+              <h3 className="font-bold text-main mb-1">Arsitektur Client-Server Modular</h3>
+              <p className="text-sm text-muted">Frontend (React) dan backend (FastAPI) dipisah secara decoupled, sehingga tiap sisi dapat dikembangkan dan diskalakan secara independen.</p>
             </div>
           </div>
         </div>
