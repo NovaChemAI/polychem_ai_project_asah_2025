@@ -32,7 +32,7 @@ function ForgotPasswordPage() {
       setEmail(''); // Kosongkan form
     } catch (error) {
       console.error(error);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      /// eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err = error as { code: string };
       
       if (err.code === 'auth/user-not-found') {
