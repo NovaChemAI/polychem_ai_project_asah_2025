@@ -15,8 +15,27 @@ load_dotenv()
 # UTIL
 # =============================================================================
 def _clean(text: str, max_len: int = 300) -> str:
+    """
+    Bersihkan whitespace, lalu potong ke max_len TANPA memotong di tengah kata
+    atau kalimat kalau bisa dihindari.
+    """
     text = re.sub(r"\s+", " ", (text or "")).strip()
-    return text[:max_len]
+    if len(text) <= max_len:
+        return text
+
+    truncated = text[:max_len]
+
+    # Coba potong mundur ke akhir kalimat/klausa terdekat (". " atau ", ")
+    last_period = max(truncated.rfind(". "), truncated.rfind(", "))
+    if last_period > max_len * 0.6:
+        return truncated[: last_period + 1].strip()
+
+    # Kalau tidak ada, potong mundur ke spasi terakhir supaya tidak motong kata
+    last_space = truncated.rfind(" ")
+    if last_space > max_len * 0.6:
+        return truncated[:last_space].strip() + "..."
+
+    return truncated.strip() + "..."
 
 
 def _fix_degree_symbol(text: str) -> str:
@@ -77,17 +96,6 @@ def get_llm(
 # =============================================================================
 # LLM SINGLETONS
 # =============================================================================
-# CATATAN OPTIMASI:
-# - timeout & max_retries diturunkan dari (25, 2) / (30, 2) menjadi lebih ketat.
-#   Model "flash" normalnya respons < 5 detik; timeout tinggi cuma bikin
-#   worst-case delay makin parah saat network lambat, bukan mempercepat.
-#
-# CATATAN KONSISTENSI:
-# - temperature diturunkan ke 0.0 untuk KEDUA model (nama/justifikasi & Tg).
-#   Tujuannya supaya SMILES yang sama menghasilkan output yang (seharusnya)
-#   sama/serupa setiap kali dipanggil ulang, bukan berubah-ubah tiap request.
-#   Catatan: temperature=0 tidak 100% menjamin determinisme mutlak di semua
-#   provider LLM, tapi jauh mengurangi variasi dibanding temperature tinggi.
 _llm_fast: Optional[ChatGoogleGenerativeAI] = None
 _llm_tg: Optional[ChatGoogleGenerativeAI] = None
 
@@ -138,9 +146,6 @@ def safe_invoke(prompt: str, fallback: str, max_len: int):
 def safe_invoke_tg(prompt: str, fallback: str, max_len: int):
     """
     Retry ringan biar gak kelamaan.
-    NOTE: max_retries sudah dihandle oleh client (ChatGoogleGenerativeAI),
-    jadi di sini cukup 1x percobaan manual tanpa sleep tambahan yang
-    memperpanjang total waktu tunggu.
     """
     try:
         resp = llm_tg().invoke(prompt)
@@ -151,14 +156,8 @@ def safe_invoke_tg(prompt: str, fallback: str, max_len: int):
 
 
 # =============================================================================
-# CACHE (nama + justifikasi) — sekarang pakai diskcache PERSISTEN
+# CACHE (nama + justifikasi) — pakai diskcache PERSISTEN
 # =============================================================================
-# CATATAN PERUBAHAN:
-# - Sebelumnya pakai dict Python biasa (_llm_cache = {}) yang hidup di RAM
-#   dan HILANG setiap kali proses server restart (termasuk auto-reload
-#   uvicorn --reload). Sekarang diarahkan ke diskcache yang sama dengan
-#   yang dipakai app/cache.py, supaya hasil generate persisten dan
-#   konsisten antar restart, dengan TTL supaya tidak nyangkut selamanya.
 NAME_JUSTIF_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 hari
 
 
@@ -231,14 +230,8 @@ def fallback_justification_long(smiles: str, compound_name: str = "") -> str:
 # =============================================================================
 def generate_name_and_justification(smiles: str) -> Tuple[str, str]:
     """
-    OPTIMASI: sebelumnya ini 2 panggilan LLM terpisah
-    (generate_compound_name + generate_new_justification).
-    Digabung jadi 1 panggilan -> motong 1 network round-trip penuh
-    (biasanya menghemat 1-3 detik per request).
-
-    KONSISTENSI: hasil di-cache secara persisten (diskcache) per SMILES,
-    jadi SMILES yang sama tidak akan generate ulang setiap request
-    (dan tidak akan berubah-ubah hasilnya setiap kali dipanggil).
+    Satu panggilan LLM untuk nama + justifikasi sekaligus (efisiensi).
+    Hasil di-cache secara persisten (diskcache) per SMILES.
     """
     smiles = (smiles or "").strip()
 
@@ -278,9 +271,6 @@ Balas HANYA JSON valid, tanpa markdown/codefence, dengan format persis:
     return name, justif
 
 
-# --- Wrapper backward-compatible (kalau ada bagian lain yang masih memanggil
-#     fungsi lama secara terpisah, ini tetap jalan tapi otomatis pakai cache
-#     dari generate_name_and_justification kalau sudah pernah dipanggil) ---
 def generate_compound_name(smiles: str) -> str:
     name, _ = generate_name_and_justification(smiles)
     return name
@@ -291,6 +281,9 @@ def generate_new_justification(smiles: str, compound_name: str) -> str:
     return justif
 
 
+# =============================================================================
+# JUSTIFIKASI SENYAWA MIRIP (BATCH)
+# =============================================================================
 def justify_similar_compounds_batch(compound_name: str, dataset_smiles_list: List[str]) -> List[str]:
     if not dataset_smiles_list:
         return []
@@ -306,40 +299,73 @@ Tugas:
 Untuk setiap SMILES, tulis justifikasi 2-3 kalimat (Bahasa Indonesia) mengapa mirip dengan target.
 Sebutkan motif yang sama bila ada: ester/eter/aromatik/percabangan/polaritas, atau kemiripan pola rantai.
 
-Format WAJIB (jangan tambah teks lain):
-[1] <justifikasi 2-3 kalimat>
-[2] <justifikasi 2-3 kalimat>
-[3] <justifikasi 2-3 kalimat>"""
+WAJIB ikuti format ini PERSIS, satu baris per nomor, tanpa teks pembuka/penutup lain:
+[1] <justifikasi>
+[2] <justifikasi>
+[3] <justifikasi>"""
 
     text = safe_invoke(prompt, fallback="", max_len=5000)
 
-    results: List[str] = []
-    for i, smi in enumerate(dataset_smiles_list):
-        m = re.search(rf"\[{i+1}\]\s*(.*?)(?=\[\d+\]|$)", text, flags=re.DOTALL)
-        if m:
-            cand = _clean(m.group(1), 900)
-            if len(cand) < 200:
-                results.append(
-                    _clean(
-                        f"Senyawa ini menunjukkan kemiripan dengan {compound_name} melalui pola ikatan dan motif gugus fungsi yang sejenis. "
-                        f"Kedekatan fitur seperti panjang rantai, percabangan, atau segmen polar dapat menghasilkan fingerprint yang berdekatan. "
-                        f"Kesamaan tersebut sering berkorelasi dengan kecenderungan sifat fisik yang mirip pada level segmen rantai.",
-                        900,
-                    )
-                )
-            else:
-                results.append(_clean(cand, 900))
-        else:
-            results.append(
-                _clean(
-                    f"Struktur ini mirip dengan {compound_name} berdasarkan kemiripan pola struktur dan fitur gugus fungsi utama. "
-                    f"Dalam pencarian similarity berbasis fingerprint, pola ikatan yang serupa biasanya meningkatkan skor kemiripan. "
-                    f"Perbedaan kecil masih mungkin muncul pada panjang rantai dan tingkat percabangan.",
-                    900,
-                )
-            )
+    # --- DEBUG: cek jawaban mentah kalau masih ada masalah parsing ---
+    # print("=== RAW GEMINI (similar compounds) ===")
+    # print(repr(text))
 
+    results: List[str] = _parse_numbered_justifs(text, dataset_smiles_list, compound_name)
     return results
+
+
+def _parse_numbered_justifs(text: str, dataset_smiles_list: List[str], compound_name: str) -> List[str]:
+    """
+    Parsing yang lebih toleran:
+    1. Coba format [1]/[2]/[3] (regex asli).
+    2. Kalau gagal, coba format "1." / "1)" (variasi umum lain dari Gemini).
+    3. Kalau masih gagal tapi teks cukup panjang & tidak ada nomor sama sekali,
+       coba split per baris sebagai upaya terakhir sebelum fallback.
+    4. Ambang minimal panjang diturunkan (200 -> 60) supaya jawaban valid
+       yang ringkas tidak ikut dibuang.
+    """
+    n = len(dataset_smiles_list)
+    results: List[Optional[str]] = []
+
+    if not text or not text.strip():
+        return [_generic_fallback(compound_name) for _ in range(n)]
+
+    patterns = [
+        r"\[{i}\]\s*(.*?)(?=\[\d+\]|$)",                              # [1] ...
+        r"(?:^|\n)\s*{i}[\.\)]\s*(.*?)(?=(?:\n\s*\d+[\.\)])|$)",       # 1. ... atau 1) ...
+    ]
+
+    for i in range(n):
+        cand = None
+        for pat in patterns:
+            m = re.search(pat.format(i=i + 1), text, flags=re.DOTALL)
+            if m:
+                candidate_text = _clean(m.group(1), 900)
+                if len(candidate_text) >= 60:
+                    cand = candidate_text
+                    break
+        results.append(cand)
+
+    if all(r is None for r in results):
+        lines = [l.strip() for l in text.split("\n") if len(l.strip()) >= 60]
+        for i in range(n):
+            if i < len(lines):
+                results[i] = _clean(lines[i], 900)
+
+    final_results: List[str] = []
+    for i in range(n):
+        final_results.append(results[i] if results[i] else _generic_fallback(compound_name))
+
+    return final_results
+
+
+def _generic_fallback(compound_name: str) -> str:
+    return _clean(
+        f"Senyawa ini menunjukkan kemiripan dengan {compound_name} melalui pola ikatan dan motif gugus fungsi yang sejenis. "
+        f"Kedekatan fitur seperti panjang rantai, percabangan, atau segmen polar dapat menghasilkan fingerprint yang berdekatan. "
+        f"Kesamaan tersebut sering berkorelasi dengan kecenderungan sifat fisik yang mirip pada level segmen rantai.",
+        900,
+    )
 
 
 # =============================================================================
@@ -395,12 +421,12 @@ Nama: {compound_name}
 MW: {mw:.2f}
 Rings: {rings}
 
-Balas HANYA JSON valid:
-{{"predicted_tg": -20.0, "tg_justification": "2-4 kalimat alasan berbasis kekakuan/fleksibilitas rantai dan polaritas."}}
+Balas HANYA JSON valid (tg_justification WAJIB dalam Bahasa Indonesia):
+{{"predicted_tg": -20.0, "tg_justification": "2-4 kalimat alasan berbasis kekakuan/fleksibilitas rantai dan polaritas, dalam Bahasa Indonesia."}}
 
 Aturan:
 - predicted_tg float -100..300
-- tg_justification maksimal 500 karakter
+- tg_justification maksimal 480 karakter, Bahasa Indonesia
 """
 
     raw = safe_invoke_tg(prompt, fallback="", max_len=1400)
@@ -414,7 +440,7 @@ Aturan:
 
             result = {
                 "tg": round(tg, 1),
-                "tg_justification": _clean(_fix_degree_symbol(just), 500),
+                "tg_justification": _clean(_fix_degree_symbol(just), 480),
             }
 
             try:
