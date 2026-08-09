@@ -43,6 +43,9 @@ function ChemicalDetailPage() {
     const user = auth.currentUser;
     if (!user) {
       toast.error("Silakan login untuk menyimpan.");
+      navigate("/login", {
+        state: { from: location.pathname, backState: location.state },
+      });
       return;
     }
     setIsSaving(true);

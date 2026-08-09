@@ -14,6 +14,8 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import WikiPage from "./pages/WikiPage";
 import VerifyEmailNoticePage from "./pages/VerifyEmailNoticePage";
 import { ThemeProvider } from "./context/ThemeContext";
+// DITAMBAHKAN: guard rute untuk halaman yang wajib login
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -54,16 +56,33 @@ function App() {
 
         {/* --- ZONE DASHBOARD (Dengan Sidebar) --- */}
         <Route element={<DashboardLayout />}>
-          {/* Halaman Utama */}
+          {/* Halaman Utama — tetap publik, tamu boleh coba prediksi */}
           <Route path="/" element={<HomePage />} />
-          {/* Halaman Detail*/}
+          {/* Halaman Detail — tetap publik, tamu boleh lihat hasil prediksi */}
           <Route path="/chemical/:id" element={<ChemicalDetailPage />} />
-          {/* Halaman Output */}
+          {/* Halaman Output — tetap publik */}
           <Route path="/result" element={<ChemicalDetailPage />} />
-          {/* Halaman History */}
-          <Route path="/history" element={<HistoryPage />} />
-          {/* Halaman Library */}
-          <Route path="/library" element={<LibraryPage />} />
+
+          {/* Halaman History — DIUBAH: wajib login, redirect ke /login jika belum */}
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <HistoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Halaman Library — DIUBAH: wajib login, redirect ke /login jika belum */}
+          <Route
+            path="/library"
+            element={
+              <ProtectedRoute>
+                <LibraryPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Halaman Wiki */}
           <Route path="/wiki" element={<WikiPage />} />
           {/* Halaman About */}
