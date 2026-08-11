@@ -8,6 +8,7 @@ from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors, Lipinski, Descriptors
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 
 load_dotenv()
 
@@ -39,7 +40,7 @@ def _clean(text: str, max_len: int = 300) -> str:
 
 
 def _fix_degree_symbol(text: str) -> str:
-    return (text or "").replace("Â°", "°").strip()
+    return (text or "").replace("Â°", "°").replace("°", "°").strip()
 
 
 def _extract_json_obj(text: str) -> Optional[dict]:
@@ -94,65 +95,103 @@ def get_llm(
 
 
 # =============================================================================
-# LLM SINGLETONS
+# LLM SINGLETONS & FALLBACK SETUP (DENGAN FAIL-FAST)
 # =============================================================================
-_llm_fast: Optional[ChatGoogleGenerativeAI] = None
-_llm_tg: Optional[ChatGoogleGenerativeAI] = None
+_llm_gemini_fast: Optional[ChatGoogleGenerativeAI] = None
+_llm_gemini_tg: Optional[ChatGoogleGenerativeAI] = None
+_llm_groq_fast: Optional[ChatGroq] = None
+_llm_groq_tg: Optional[ChatGroq] = None
 
 
-def llm_fast():
-    """
-    Untuk nama + justifikasi umum.
-    Model bisa dioverride via ENV: GEMINI_MODEL_FAST
-    """
-    global _llm_fast
-    if _llm_fast is None:
+def _get_gemini_fast():
+    global _llm_gemini_fast
+    if _llm_gemini_fast is None:
         model = os.getenv("GEMINI_MODEL_FAST", "gemini-2.5-flash")
-        _llm_fast = get_llm(
-            model_name=model,
-            timeout=45,
-            max_retries=2,
-            temperature=0.0,
-        )
-    return _llm_fast
+        # FAIL-FAST: Timeout diturunkan jadi 15s, max_retries jadi 0 agar cepat ke Groq
+        _llm_gemini_fast = get_llm(model_name=model, timeout=15, max_retries=0, temperature=0.0)
+    return _llm_gemini_fast
 
 
-def llm_tg():
-    """
-    Khusus Tg: deterministik.
-    Model bisa dioverride via ENV: GEMINI_MODEL_TG
-    """
-    global _llm_tg
-    if _llm_tg is None:
+def _get_gemini_tg():
+    global _llm_gemini_tg
+    if _llm_gemini_tg is None:
         model = os.getenv("GEMINI_MODEL_TG", "gemini-2.5-flash")
-        _llm_tg = get_llm(
-            model_name=model,
-            timeout=45,
-            max_retries=2,
-            temperature=0.0,
-        )
-    return _llm_tg
+        # FAIL-FAST: Timeout diturunkan jadi 20s, max_retries jadi 0 agar cepat ke Groq
+        _llm_gemini_tg = get_llm(model_name=model, timeout=20, max_retries=0, temperature=0.0)
+    return _llm_gemini_tg
+
+
+def _get_groq(model_name: str):
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY belum diset di environment.")
+    return ChatGroq(
+        model=model_name,
+        temperature=0.0,
+        groq_api_key=api_key,
+        timeout=30,
+        max_retries=1,
+    )
+
+
+def _get_groq_fast():
+    global _llm_groq_fast
+    if _llm_groq_fast is None:
+        model = os.getenv("GROQ_MODEL_FAST", "llama-3.3-70b-versatile")
+        _llm_groq_fast = _get_groq(model)
+    return _llm_groq_fast
+
+
+def _get_groq_tg():
+    global _llm_groq_tg
+    if _llm_groq_tg is None:
+        model = os.getenv("GROQ_MODEL_TG", "llama-3.3-70b-versatile")
+        _llm_groq_tg = _get_groq(model)
+    return _llm_groq_tg
 
 
 def safe_invoke(prompt: str, fallback: str, max_len: int):
-    try:
-        resp = llm_fast().invoke(prompt)
-        return _clean(getattr(resp, "content", ""), max_len=max_len)
-    except Exception as e:
-        print("LLM error:", repr(e))
-        return fallback
+    """
+    Coba Gemini dulu (provider utama). Kalau gagal (quota habis, timeout,
+    error jaringan, dsb), otomatis coba Groq sebagai provider cadangan.
+    Kalau keduanya gagal, kembalikan fallback (akan memicu fallback RDKit
+    di pemanggilnya).
+    """
+    providers = [
+        ("gemini", _get_gemini_fast),
+        ("groq", _get_groq_fast),
+    ]
+    for provider_name, get_llm_fn in providers:
+        try:
+            llm = get_llm_fn()
+            resp = llm.invoke(prompt)
+            content = _clean(getattr(resp, "content", ""), max_len=max_len)
+            if content:
+                print(f"[LLM] sukses via provider: {provider_name}")
+                return content
+        except Exception as e:
+            print(f"[LLM] gagal via {provider_name}:", repr(e))
+            continue
+    return fallback
 
 
 def safe_invoke_tg(prompt: str, fallback: str, max_len: int):
-    """
-    Retry ringan biar gak kelamaan.
-    """
-    try:
-        resp = llm_tg().invoke(prompt)
-        return _clean(getattr(resp, "content", ""), max_len=max_len)
-    except Exception as e:
-        print("LLM Tg error:", repr(e))
-        return fallback
+    providers = [
+        ("gemini", _get_gemini_tg),
+        ("groq", _get_groq_tg),
+    ]
+    for provider_name, get_llm_fn in providers:
+        try:
+            llm = get_llm_fn()
+            resp = llm.invoke(prompt)
+            content = _clean(getattr(resp, "content", ""), max_len=max_len)
+            if content:
+                print(f"[LLM Tg] sukses via provider: {provider_name}")
+                return content
+        except Exception as e:
+            print(f"[LLM Tg] gagal via {provider_name}:", repr(e))
+            continue
+    return fallback
 
 
 # =============================================================================
@@ -305,10 +344,6 @@ WAJIB ikuti format ini PERSIS, satu baris per nomor, tanpa teks pembuka/penutup 
 [3] <justifikasi>"""
 
     text = safe_invoke(prompt, fallback="", max_len=5000)
-
-    # --- DEBUG: cek jawaban mentah kalau masih ada masalah parsing ---
-    # print("=== RAW GEMINI (similar compounds) ===")
-    # print(repr(text))
 
     results: List[str] = _parse_numbered_justifs(text, dataset_smiles_list, compound_name)
     return results
