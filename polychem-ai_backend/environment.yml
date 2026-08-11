@@ -15,6 +15,7 @@ dependencies:
       - pydantic
       - langchain
       - langchain-google-genai
+      - langchain-groq
       - python-dotenv
       - diskcache==5.6.3
       - requests
