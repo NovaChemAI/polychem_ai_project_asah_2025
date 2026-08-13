@@ -10,6 +10,43 @@ import {
 } from "../services/apiService";
 import { auth } from "../lib/firebase";
 
+// --- BARU: OVERLAY CTA UNTUK MENGUNCI HASIL (di luar komponen, hindari nested component) ---
+function LockedOverlay({ onLogin }: { onLogin: () => void }) {
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-white/70 dark:bg-slate-900/80 backdrop-blur-sm rounded-3xl">
+      <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-blue-600 flex items-center justify-center shadow-xl">
+        <svg
+          className="w-7 h-7 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+          />
+        </svg>
+      </div>
+      <div className="text-center px-6">
+        <h3 className="font-black text-lg text-slate-900 dark:text-white mb-1">
+          Login untuk melihat hasil
+        </h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">
+          Detail prediksi dan senyawa serupa hanya bisa dilihat setelah Anda masuk ke akun.
+        </p>
+      </div>
+      <button
+        onClick={onLogin}
+        className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-black text-sm shadow-lg transform transition hover:-translate-y-0.5 active:scale-95"
+      >
+        LOGIN SEKARANG
+      </button>
+    </div>
+  );
+}
+
 function ChemicalDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -86,41 +123,6 @@ function ChemicalDetailPage() {
       state: { from: location.pathname, backState: location.state },
     });
   };
-
-  // --- BARU: OVERLAY CTA UNTUK MENGUNCI HASIL ---
-  const LockedOverlay = () => (
-    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-white/70 dark:bg-slate-900/80 backdrop-blur-sm rounded-3xl">
-      <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-blue-600 flex items-center justify-center shadow-xl">
-        <svg
-          className="w-7 h-7 text-white"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-          />
-        </svg>
-      </div>
-      <div className="text-center px-6">
-        <h3 className="font-black text-lg text-slate-900 dark:text-white mb-1">
-          Login untuk melihat hasil
-        </h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">
-          Detail prediksi dan senyawa serupa hanya bisa dilihat setelah Anda masuk ke akun.
-        </p>
-      </div>
-      <button
-        onClick={handleLoginRedirect}
-        className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-black text-sm shadow-lg transform transition hover:-translate-y-0.5 active:scale-95"
-      >
-        LOGIN SEKARANG
-      </button>
-    </div>
-  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -245,7 +247,7 @@ function ChemicalDetailPage() {
         </div>
 
         {/* --- OVERLAY JIKA BELUM LOGIN --- */}
-        {authChecked && !isLoggedIn && <LockedOverlay />}
+        {authChecked && !isLoggedIn && <LockedOverlay onLogin={handleLoginRedirect} />}
       </div>
 
       {/* --- BAGIAN SIMILAR COMPOUNDS --- */}
