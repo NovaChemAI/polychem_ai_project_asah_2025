@@ -47,6 +47,12 @@ function AboutPage() {
     { name: "Zakiul Fata", role: "Front-End & Back-End", image: userMale, color: "blue" }
   ];
 
+  // --- BARU: DATA PEMBIMBING ---
+  const advisorTeam: TeamMember[] = [
+    { name: "Nazaruddin Ahmad, M.T.", role: "Pembimbing 1", image: userMale, color: "blue" },
+    { name: "Khairan AR, M.Kom", role: "Pembimbing 2", image: userMale, color: "blue" }
+  ];
+
   const renderMemberCard = (member: TeamMember, index: number) => (
     <div key={index} className="bg-card p-6 rounded-2xl border border-border hover:shadow-lg transition-all group w-full sm:w-64 flex flex-col items-center text-center">
       <div className={`w-24 h-24 rounded-full mb-4 p-1 shadow-sm ring-4 ring-gray-50 dark:ring-slate-800 overflow-hidden bg-card
@@ -209,6 +215,17 @@ function AboutPage() {
           <div className="flex flex-wrap justify-center gap-6 w-full">
             {webTeam.map((member, index) => renderMemberCard(member, index))}
           </div>
+        </div>
+      </div>
+
+      {/* --- SECTION 4: PEMBIMBING --- */}
+      <div className="px-6 mt-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-main mb-4">Pembimbing</h2>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-6 w-full">
+          {advisorTeam.map((member, index) => renderMemberCard(member, index))}
         </div>
       </div>
 

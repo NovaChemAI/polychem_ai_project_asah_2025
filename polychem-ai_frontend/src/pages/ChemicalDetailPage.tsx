@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   saveToLibraryBackend,
   checkIsSavedBackend,
@@ -15,6 +16,10 @@ function ChemicalDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
+  // --- BARU: STATUS LOGIN (untuk blur hasil) ---
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
   const predictionData = normalizePrediction(location.state?.predictionData);
 
   useEffect(() => {
@@ -22,6 +27,15 @@ function ChemicalDetailPage() {
       navigate("/");
     }
   }, [predictionData, navigate]);
+
+  // --- BARU: DENGARKAN STATUS AUTH SECARA REAKTIF ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsLoggedIn(!!user);
+      setAuthChecked(true);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const checkSaved = async () => {
@@ -67,6 +81,47 @@ function ChemicalDetailPage() {
     setIsSaving(false);
   };
 
+  const handleLoginRedirect = () => {
+    navigate("/login", {
+      state: { from: location.pathname, backState: location.state },
+    });
+  };
+
+  // --- BARU: OVERLAY CTA UNTUK MENGUNCI HASIL ---
+  const LockedOverlay = () => (
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-white/70 dark:bg-slate-900/80 backdrop-blur-sm rounded-3xl">
+      <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-blue-600 flex items-center justify-center shadow-xl">
+        <svg
+          className="w-7 h-7 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+          />
+        </svg>
+      </div>
+      <div className="text-center px-6">
+        <h3 className="font-black text-lg text-slate-900 dark:text-white mb-1">
+          Login untuk melihat hasil
+        </h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">
+          Detail prediksi dan senyawa serupa hanya bisa dilihat setelah Anda masuk ke akun.
+        </p>
+      </div>
+      <button
+        onClick={handleLoginRedirect}
+        className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-black text-sm shadow-lg transform transition hover:-translate-y-0.5 active:scale-95"
+      >
+        LOGIN SEKARANG
+      </button>
+    </div>
+  );
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <button
@@ -77,115 +132,124 @@ function ChemicalDetailPage() {
       </button>
 
       {/* --- KARTU UTAMA (HASIL PREDIKSI) --- */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col md:flex-row transition-all">
-        {/* Sisi Kiri: Gambar Struktur Utama */}
-        <div className="md:w-1/3 bg-gray-50 dark:bg-slate-800/50 p-10 flex items-center justify-center border-r border-border relative">
-          {compound.image_url ? (
-            <img
-              src={buildAssetUrl(compound.image_url)}
-              alt="Structure"
-              className="w-full h-auto max-w-[280px] object-contain mix-blend-multiply dark:mix-blend-normal filter dark:invert"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  "https://via.placeholder.com/300?text=No+Structure";
-              }}
-            />
-          ) : (
-            <div className="text-gray-400 font-medium">No Structure Image</div>
-          )}
-        </div>
-
-        {/* Sisi Kanan: Detail Informasi */}
-        <div className="p-8 md:p-10 md:w-2/3 flex flex-col">
-          <div className="mb-6">
-            <span className="inline-block px-4 py-1.5 text-[10px] font-black tracking-widest text-blue-700 uppercase bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg mb-3">
-              {compound.polymer_class || "Novel Compound"}
-            </span>
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white leading-tight">
-              {compound.name && compound.name !== "GeneratedCompound"
-                ? compound.name
-                : "Unknown Compound"}
-            </h1>
+      <div className="relative">
+        <div
+          className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col md:flex-row transition-all ${
+            authChecked && !isLoggedIn ? "blur-md select-none pointer-events-none" : ""
+          }`}
+        >
+          {/* Sisi Kiri: Gambar Struktur Utama */}
+          <div className="md:w-1/3 bg-gray-50 dark:bg-slate-800/50 p-10 flex items-center justify-center border-r border-border relative">
+            {compound.image_url ? (
+              <img
+                src={buildAssetUrl(compound.image_url)}
+                alt="Structure"
+                className="w-full h-auto max-w-[280px] object-contain mix-blend-multiply dark:mix-blend-normal filter dark:invert"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src =
+                    "https://via.placeholder.com/300?text=No+Structure";
+                }}
+              />
+            ) : (
+              <div className="text-gray-400 font-medium">No Structure Image</div>
+            )}
           </div>
 
-          {/* SMILES Box */}
-          <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-xl mb-8 font-mono text-xs text-slate-500 dark:text-slate-400 break-all border border-slate-200 dark:border-slate-700 relative group">
-            <span className="absolute -top-2 left-3 bg-white dark:bg-slate-900 px-2 text-[9px] font-bold text-slate-400 border border-slate-200 dark:border-slate-700 rounded uppercase">
-              SMILES Notation
-            </span>
-            {compound.smiles}
-          </div>
+          {/* Sisi Kanan: Detail Informasi */}
+          <div className="p-8 md:p-10 md:w-2/3 flex flex-col">
+            <div className="mb-6">
+              <span className="inline-block px-4 py-1.5 text-[10px] font-black tracking-widest text-blue-700 uppercase bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg mb-3">
+                {compound.polymer_class || "Novel Compound"}
+              </span>
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white leading-tight">
+                {compound.name && compound.name !== "GeneratedCompound"
+                  ? compound.name
+                  : "Unknown Compound"}
+              </h1>
+            </div>
 
-          {/* Grid Informasi Utama */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-            <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Formula predict
-              </p>
-              <p className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                {compound.formula}
-              </p>
+            {/* SMILES Box */}
+            <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-xl mb-8 font-mono text-xs text-slate-500 dark:text-slate-400 break-all border border-slate-200 dark:border-slate-700 relative group">
+              <span className="absolute -top-2 left-3 bg-white dark:bg-slate-900 px-2 text-[9px] font-bold text-slate-400 border border-slate-200 dark:border-slate-700 rounded uppercase">
+                SMILES Notation
+              </span>
+              {compound.smiles}
             </div>
-            <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Mol. Weight predict
-              </p>
-              <p className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                {compound.molecular_weight.toFixed(2)}{" "}
-                <span className="text-xs font-normal opacity-60">g/mol</span>
-              </p>
-            </div>
-            <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800/50 col-span-1 sm:col-span-2">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">
-                  Glass Transition Temperature (Tg) predict
+
+            {/* Grid Informasi Utama */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Formula predict
                 </p>
-                <span
-                  className={`text-[10px] px-2 py-1 rounded-md font-black uppercase ${compound.tg > 50 ? "bg-orange-100 text-orange-600" : "bg-green-100 text-green-600"}`}
-                >
-                  {compound.tg > 50 ? "Heat Resistant" : "Highly Flexible"}
-                </span>
+                <p className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                  {compound.formula}
+                </p>
               </div>
-              <p className="text-4xl font-black text-slate-900 dark:text-white mb-2">
-                {compound.tg} °C
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 italic bg-white/50 dark:bg-slate-900/50 p-2 rounded-lg border border-blue-50 dark:border-blue-900/20">
-                "{compound.tg_justification}"
+              <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Mol. Weight predict
+                </p>
+                <p className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                  {compound.molecular_weight.toFixed(2)}{" "}
+                  <span className="text-xs font-normal opacity-60">g/mol</span>
+                </p>
+              </div>
+              <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800/50 col-span-1 sm:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">
+                    Glass Transition Temperature (Tg) predict
+                  </p>
+                  <span
+                    className={`text-[10px] px-2 py-1 rounded-md font-black uppercase ${compound.tg > 50 ? "bg-orange-100 text-orange-600" : "bg-green-100 text-green-600"}`}
+                  >
+                    {compound.tg > 50 ? "Heat Resistant" : "Highly Flexible"}
+                  </span>
+                </div>
+                <p className="text-4xl font-black text-slate-900 dark:text-white mb-2">
+                  {compound.tg} °C
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 italic bg-white/50 dark:bg-slate-900/50 p-2 rounded-lg border border-blue-50 dark:border-blue-900/20">
+                  "{compound.tg_justification}"
+                </p>
+              </div>
+            </div>
+
+            {/* AI Analysis */}
+            <div className="mb-10">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>{" "}
+                Justification
+              </h3>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm bg-slate-50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                {compound.justifikasi}
               </p>
             </div>
-          </div>
 
-          {/* AI Analysis */}
-          <div className="mb-10">
-            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>{" "}
-              Justification
-            </h3>
-            <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm bg-slate-50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
-              {compound.justifikasi}
-            </p>
+            <button
+              onClick={handleSave}
+              disabled={isSaving || isSaved}
+              className={`mt-auto w-full py-4 rounded-2xl font-black text-lg shadow-xl transform transition hover:-translate-y-1 active:scale-95 disabled:cursor-not-allowed ${
+                isSaved
+                  ? "bg-green-600 dark:bg-green-600 text-white opacity-90 disabled:opacity-90"
+                  : "bg-slate-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-500 text-white disabled:opacity-50"
+              }`}
+            >
+              {isSaved
+                ? "SUDAH TERSIMPAN"
+                : isSaving
+                  ? "PROCESSING..."
+                  : "SAVE TO LIBRARY"}
+            </button>
           </div>
-
-          <button
-            onClick={handleSave}
-            disabled={isSaving || isSaved}
-            className={`mt-auto w-full py-4 rounded-2xl font-black text-lg shadow-xl transform transition hover:-translate-y-1 active:scale-95 disabled:cursor-not-allowed ${
-              isSaved
-                ? "bg-green-600 dark:bg-green-600 text-white opacity-90 disabled:opacity-90"
-                : "bg-slate-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-500 text-white disabled:opacity-50"
-            }`}
-          >
-            {isSaved
-              ? "SUDAH TERSIMPAN"
-              : isSaving
-                ? "PROCESSING..."
-                : "SAVE TO LIBRARY"}
-          </button>
         </div>
+
+        {/* --- OVERLAY JIKA BELUM LOGIN --- */}
+        {authChecked && !isLoggedIn && <LockedOverlay />}
       </div>
 
       {/* --- BAGIAN SIMILAR COMPOUNDS --- */}
-      <div className="mt-16">
+      <div className="mt-16 relative">
         <div className="flex items-center gap-4 mb-8">
           <h2 className="text-2xl font-black text-slate-900 dark:text-white">
             Similar Compounds Found
@@ -193,7 +257,11 @@ function ChemicalDetailPage() {
           <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800"></div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div
+          className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${
+            authChecked && !isLoggedIn ? "blur-md select-none pointer-events-none" : ""
+          }`}
+        >
           {similar.map((item, idx) => (
             <div
               key={idx}
@@ -266,6 +334,18 @@ function ChemicalDetailPage() {
             </div>
           ))}
         </div>
+
+        {/* --- OVERLAY JIKA BELUM LOGIN (Similar Compounds) --- */}
+        {authChecked && !isLoggedIn && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/60 dark:bg-slate-900/70 backdrop-blur-sm rounded-2xl">
+            <button
+              onClick={handleLoginRedirect}
+              className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-black text-sm shadow-lg transform transition hover:-translate-y-0.5 active:scale-95"
+            >
+              LOGIN UNTUK MELIHAT SENYAWA SERUPA
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
