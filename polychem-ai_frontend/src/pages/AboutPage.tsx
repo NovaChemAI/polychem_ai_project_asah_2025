@@ -63,7 +63,9 @@ function AboutPage() {
           className="w-full h-full object-cover rounded-full"
         />
       </div>
-      <h3 className="font-bold text-lg text-main mb-1">{member.name}</h3>
+      {/*▼ EDIT DI BAGIAN INI ▼*/}
+      <h3 className="font-bold text-lg text-main mb-1 whitespace-nowrap truncate">{member.name}</h3>
+      {/*▲ EDIT DI BAGIAN INI ▲*/}
       <span className={`px-3 py-1 rounded-full text-xs font-medium 
         ${member.color === 'green' 
           ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
